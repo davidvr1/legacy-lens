@@ -16,9 +16,27 @@ What works now:
 - Playwright end-to-end tests in `web/e2e/` with one smoke test (home page loads).
 - GitHub Actions CI: .NET build + test, web lint + build, Playwright on Chromium (report and traces uploaded on failure).
 
+**Stage 1 – Rule engine** (done)
+
+- `LegacyLens.Core` has `SourceFile`, `IRule`, `IRuleEngine` and seven deterministic rules:
+
+  | Id | Detects | Severity |
+  |---|---|---|
+  | SQL001 | SQL built by concatenating request data or variables | High |
+  | XSS001 | Request data written with `Response.Write` / `<%= %>` without HTML encoding (follows variables set from request data) | High |
+  | SEC001 | Hard-coded connection strings, passwords and keys (the secret value is never repeated in the finding) | High |
+  | ERR001 | `On Error Resume Next` without a later `Err.Number` check | Medium |
+  | COM001 | COM dependencies from `Server.CreateObject(...)`, with a .NET replacement hint | Info |
+  | SES001 | Heavy `Session(...)` usage (more than 10 reads/writes by default) | Low |
+  | INC001 | `<!--#include file/virtual-->` dependencies | Info |
+
+- Rules look only at server-side code: comments (`'`, `Rem`, `//`) and HTML outside `<% %>` are ignored, and text inside string literals is not mistaken for code.
+- Five hand-written sample pages in `samples/` (four Classic ASP, one WebForms code-behind). One of them, `safe-orders.asp`, shows the safe patterns and has only Info findings. A test checks the exact findings for each sample.
+- The rules are pattern-based heuristics, not a full VBScript/C# parser. Known limits: variables are tracked within one file only, and a value passed through a function (for example `x = Trim(name)`) is not followed.
+
 No paid API or service is used. The LLM features (later stages) run on a free local model via Ollama, or in Demo mode by default.
 
-Next: Stage 1 – rule engine.
+Next: Stage 2 – API + UI for findings.
 
 ## Repository layout
 
@@ -32,6 +50,8 @@ tests/
   LegacyLens.Api.Tests/      Integration tests (WebApplicationFactory)
 web/                         React + TypeScript (Vite)
 web/e2e/                     Playwright end-to-end UI tests
+samples/                     Hand-written legacy sample pages
+.claude/agents/              Claude Code agent roles (product manager, project manager, QA, developer)
 ```
 
 ## Prerequisites

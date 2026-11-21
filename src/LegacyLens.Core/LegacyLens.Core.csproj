@@ -1,3 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="LegacyLens.Core.Tests" />
+  </ItemGroup>
+
 </Project>
