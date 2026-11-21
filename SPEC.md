@@ -7,7 +7,7 @@ LegacyLens takes a legacy web page (Classic ASP or ASP.NET WebForms), explains w
 It is a portfolio project. It should show:
 - Solid .NET 8 backend engineering (Web API, EF Core, SQL Server, clean layering, tests).
 - A React + TypeScript front end.
-- Practical, *reliable* AI use: deterministic checks first, LLM second, structured output, grounding, validation of generated code, and an evaluation harness.
+- Practical, *reliable* AI use: deterministic checks first, LLM second, structured output, grounding, validation of generated code, and an evaluation harness. The LLM runs locally (Ollama) behind a swappable interface: zero cost, no code leaves the machine.
 - DevOps basics: Docker Compose and GitHub Actions CI.
 
 Non-goals: a full migration tool, multi-user auth, production hosting.
@@ -37,14 +37,14 @@ legacy-lens/
   tests/
     LegacyLens.Core.Tests/     xUnit tests (rules, retriever, orchestration with mocks)
     LegacyLens.Api.Tests/      Integration tests (WebApplicationFactory)
-  docker-compose.yml           api + web + sqlserver
+  docker-compose.yml           api + web + sqlserver (+ optional ollama profile)
   .github/workflows/ci.yml     build + test
 ```
 
 Key interfaces (in Core):
 - `IRule` – one deterministic detector. Returns `Finding[]` (Id, Severity, Line, Title, Explanation, Fix).
 - `IRuleEngine` – runs all rules on a `SourceFile`.
-- `ILlmClient` – `Task<T> CompleteJsonAsync<T>(prompt, schema, ct)`. Implementations: `AnthropicLlmClient` (Messages API via `IHttpClientFactory`) and `DemoLlmClient` (canned responses, used when no API key is set).
+- `ILlmClient` – `Task<T> CompleteJsonAsync<T>(prompt, schema, ct)`. Implementations: `OllamaLlmClient` (a free local model through Ollama's HTTP API at `http://localhost:11434`, via `IHttpClientFactory`) and `DemoLlmClient` (canned responses). No paid API is used anywhere.
 - `IRetriever` – `Task<IReadOnlyList<KnowledgeChunk>> SearchAsync(query, topK)`. First implementation: BM25 over `knowledge/*.md`. Can be swapped later for embeddings.
 - `ICodeValidator` – compiles a generated C# snippet with Roslyn and returns diagnostics.
 - `IAnalysisService` – orchestrates: rules → retrieval → LLM summary → LLM migration → validation → save.
@@ -75,8 +75,9 @@ Each rule has unit tests with positive and negative examples.
 - All LLM calls request JSON matching a schema. Invalid JSON → one retry with the validation error in the prompt → otherwise return a clear error.
 - The migration prompt includes the top-k knowledge chunks. The response must list which chunk ids it used, and the UI shows them as sources.
 - Generated C# is compiled with Roslyn (as a class in a stub project context). If it fails, one repair attempt with the compiler diagnostics. The UI shows "compiles ✓" or the remaining diagnostics.
-- The model name and max tokens come from configuration. The API key comes from user-secrets or an environment variable, never from source control.
-- With no API key, the app runs in **Demo mode** using `DemoLlmClient`, so anyone can clone and run it.
+- The LLM provider, model name (default `qwen2.5-coder:7b`) and Ollama URL come from configuration (`Llm:Provider` = `Demo` | `Ollama`).
+- The default is **Demo mode** (`DemoLlmClient`), so anyone can clone and run it with no model installed and no cost.
+- **Cost rule: the project must never require a paid API or paid service.** Local models via Ollama only.
 
 ## 6. Evaluation harness
 
@@ -95,7 +96,7 @@ Work one stage at a time. Each stage ends with a green build, passing tests and 
 0. **Scaffold**: solution, projects, React app (Vite + TS), `.gitignore`, README skeleton, GitHub Actions CI (build + test). Health endpoint.
 1. **Rule engine**: `SourceFile`, `IRule`, the 7 rules, `IRuleEngine`, unit tests, and 4–6 hand-written samples in `samples/`.
 2. **API + UI for findings**: `POST /api/analyses` runs rules only. React page with code input, file upload, and a findings table with line numbers.
-3. **LLM summary**: `ILlmClient` (Anthropic + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client.
+3. **LLM summary**: `ILlmClient` (Ollama + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client.
 4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever + tests.
 5. **Migration proposal**: grounded prompt, sources list, Roslyn validation + one repair attempt, migration panel with a code viewer and "compiles" badge.
 6. **Persistence + history**: EF Core, migrations, History page.
@@ -103,6 +104,6 @@ Work one stage at a time. Each stage ends with a green build, passing tests and 
 
 ## 9. Definition of done for the project
 
-- `docker compose up` runs everything locally; Demo mode works without any key.
+- `docker compose up` runs everything locally in Demo mode; an optional `ollama` service/profile enables the local model.
 - CI is green on GitHub.
 - README explains the problem, the design (rules first, AI second, validation), how to run, and eval results.

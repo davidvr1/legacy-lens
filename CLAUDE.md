@@ -23,16 +23,17 @@ LegacyLens: see `SPEC.md` for the goal, architecture and the numbered build stag
 - Options pattern (`IOptions<T>`) for configuration.
 - `IHttpClientFactory` for outgoing HTTP.
 - Records for DTOs and immutable domain values.
-- Every rule and every non-trivial service gets xUnit tests. Mock `ILlmClient` in tests; tests must never call a real API.
+- Every rule and every non-trivial service gets xUnit tests. Mock `ILlmClient` in tests; tests must never call a real model or network service.
 
 ## React / TypeScript conventions
 - Vite + React + TypeScript with `strict: true`.
 - Function components and hooks. Keep API calls in one `api.ts` module.
 - Simple, clean UI; no heavy UI framework unless asked.
 
-## Security
-- Never commit secrets. The Anthropic API key comes from `dotnet user-secrets` or the `ANTHROPIC_API_KEY` environment variable.
-- If no key is configured, use `DemoLlmClient` (Demo mode).
+## Cost and security
+- This project must never use a paid API or paid service. The LLM is a free local model via Ollama, or Demo mode.
+- Do not add any Anthropic/OpenAI API client, and never set or read `ANTHROPIC_API_KEY` (it would switch Claude Code itself to paid API billing).
+- Never commit secrets of any kind.
 - Samples in `samples/` and `evals/` are hand-written examples only. Never paste real code from any employer.
 
 ## Docs
