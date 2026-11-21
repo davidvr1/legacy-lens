@@ -34,7 +34,8 @@ legacy-lens/
   web/e2e/                     Playwright end-to-end UI tests (TypeScript)
   knowledge/                   Markdown notes: Classic ASP / WebForms -> ASP.NET Core mappings
   samples/                     Hand-written legacy sample pages (no real employer code)
-  evals/                       Eval cases: sample file + expected findings
+  evals/                       Eval cases: sample file + expected findings and facts; retrieval queries; results
+  tools/LegacyLens.Evals/      Console app: LLM evals and the tuning grid (manual, local Ollama)
   tests/
     LegacyLens.Core.Tests/     xUnit tests (rules, retriever, orchestration with mocks)
     LegacyLens.Api.Tests/      Integration tests (WebApplicationFactory)
@@ -76,15 +77,25 @@ Each rule has unit tests with positive and negative examples.
 - All LLM calls request JSON matching a schema. Invalid JSON → one retry with the validation error in the prompt → otherwise return a clear error.
 - The migration prompt includes the top-k knowledge chunks. The response must list which chunk ids it used, and the UI shows them as sources.
 - Generated C# is compiled with Roslyn (as a class in a stub project context). If it fails, one repair attempt with the compiler diagnostics. The UI shows "compiles ✓" or the remaining diagnostics.
-- The LLM provider, model name (default `qwen2.5-coder:7b`) and Ollama URL come from configuration (`Llm:Provider` = `Demo` | `Ollama`).
+- The LLM provider, model name (default `qwen2.5-coder:7b` until stage 5b picks the best model), Ollama URL and sampling parameters (`Temperature`, `TopP`, `NumCtx`) come from configuration (`Llm:Provider` = `Demo` | `Ollama`).
 - The default is **Demo mode** (`DemoLlmClient`), so anyone can clone and run it with no model installed and no cost.
 - **Cost rule: the project must never require a paid API or paid service.** Local models via Ollama only.
 
 ## 6. Evaluation harness
 
-- `evals/` holds cases: `case-name/input.asp` + `expected.json` (expected rule ids and lines).
-- A test (or a small console command) runs the rule engine on all cases and prints precision/recall per rule.
-- The README shows the latest numbers.
+Three levels, all free. Levels 1–2 are deterministic and run in CI. Level 3 needs a local model, so it runs manually and its results are committed.
+
+1. **Rules**: `evals/` holds cases: `case-name/input.asp` + `expected.json` (expected rule ids and lines). A test (or a small console command) runs the rule engine on all cases and prints precision/recall per rule.
+2. **Retrieval** (stage 4): `evals/retrieval.json` lists queries (code snippets or questions) with the expected knowledge chunk ids. A test measures recall@k and MRR. Target: recall@3 ≥ 0.9.
+3. **LLM** (stage 5b, manual, Ollama only): an eval console app (`tools/LegacyLens.Evals`) runs the real model on every case.
+   - Summary: `expected.json` also lists expected facts (inputs, outputs, DB access, includes, COM objects). Metrics: fact recall, and hallucination rate (stated facts not in the expected list or the code).
+   - Migration: compile rate on first attempt and after the repair attempt; share of answers whose cited sources are valid chunk ids that were in the prompt.
+   - Targets: fact recall ≥ 0.9, hallucination rate ≤ 0.05, compile rate after repair ≥ 0.8.
+   - Each configuration runs at least 3 times; results report mean and spread.
+
+**Tuning** (stage 5b): the eval app runs a grid over model (`qwen2.5-coder:1.5b`, `3b`, `7b`), `Temperature` (0, 0.2, 0.5), `TopP` (0.9, 1.0), prompt variant (zero-shot vs few-shot with one hand-written example), retrieval `topK` (3, 5) and BM25 `k1`/`b`. It writes `evals/results/*.json` and a Markdown table including latency. The best configuration that meets the targets on the developer's hardware (GTX 1650, 4 GB VRAM) becomes the default in `appsettings.json`. Fine-tuning model weights is out of scope (not practical on 4 GB VRAM and too little training data).
+
+The README shows the latest numbers for all three levels.
 
 ## 6a. End-to-end UI tests (Playwright)
 
@@ -115,13 +126,14 @@ Work one stage at a time. Each stage ends with a green build, passing tests and 
 1. **Rule engine**: `SourceFile`, `IRule`, the 7 rules, `IRuleEngine`, unit tests, and 4–6 hand-written samples in `samples/`.
 2. **API + UI for findings**: `POST /api/analyses` runs rules only. React page with code input, file upload, and a findings table with line numbers. Playwright tests for paste, upload, empty input and API error.
 3. **LLM summary**: `ILlmClient` (Ollama + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client; Playwright test for the summary panel.
-4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever + tests.
+4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever (configurable `k1`, `b`, `topK`) + tests + retrieval eval (section 6, level 2). Make LLM sampling parameters configurable (`Temperature`, `TopP`, `NumCtx`).
 5. **Migration proposal**: grounded prompt, sources list, Roslyn validation + one repair attempt, migration panel with a code viewer and "compiles" badge. Playwright test for the migration panel.
+5b. **LLM evaluation and tuning**: 6–8 eval cases with expected facts, the eval console app (section 6, level 3), the tuning grid, the results table, and the chosen defaults. Unit tests for the metric calculations (mocked `ILlmClient`); the real model runs only manually.
 6. **Persistence + history**: EF Core, migrations, History page. Playwright test for history.
-7. **Evals + polish**: eval cases and metrics, Docker Compose (api, web, sqlserver), README with architecture diagram, screenshots and a short GIF.
+7. **Evals + polish**: rule eval cases and metrics (section 6, level 1), Docker Compose (api, web, sqlserver), README with architecture diagram, screenshots and a short GIF.
 
 ## 9. Definition of done for the project
 
 - `docker compose up` runs everything locally in Demo mode; an optional `ollama` service/profile enables the local model.
 - CI is green on GitHub, including the Playwright UI tests.
-- README explains the problem, the design (rules first, AI second, validation), how to run, and eval results.
+- README explains the problem, the design (rules first, AI second, validation), how to run, and eval results (rules, retrieval, LLM) with the chosen model configuration.
