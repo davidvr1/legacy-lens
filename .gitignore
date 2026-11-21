@@ -14,6 +14,12 @@ dist/
 *.log
 *.local
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # Editors / OS
 .idea/
 .vscode/*
