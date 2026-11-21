@@ -14,7 +14,8 @@ LegacyLens: see `SPEC.md` for the goal, architecture and the numbered build stag
 1. `dotnet build` – no errors, no new warnings.
 2. `dotnet test` – all tests pass.
 3. In `web/`: `npm run build` and `npm run lint` pass (once the web app exists).
-4. Commit with a conventional message, e.g. `feat(rules): add SQL001 string-concatenation detector`.
+4. In `web/`: `npx playwright test` passes. Any UI change comes with a new or updated Playwright test.
+5. Commit with a conventional message, e.g. `feat(rules): add SQL001 string-concatenation detector`.
 
 ## C# / .NET conventions
 - .NET 8, C# 12, `<Nullable>enable</Nullable>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
@@ -29,6 +30,7 @@ LegacyLens: see `SPEC.md` for the goal, architecture and the numbered build stag
 - Vite + React + TypeScript with `strict: true`.
 - Function components and hooks. Keep API calls in one `api.ts` module.
 - Simple, clean UI; no heavy UI framework unless asked.
+- Add `data-testid` to every element a Playwright test interacts with.
 
 ## Cost and security
 - This project must never use a paid API or paid service. The LLM is a free local model via Ollama, or Demo mode.

@@ -31,6 +31,7 @@ legacy-lens/
     LegacyLens.Core/           Domain models, interfaces, rule engine, orchestration
     LegacyLens.Infrastructure/ EF Core (SQL Server), LLM client, retriever, Roslyn compile check
   web/                         React + TypeScript (Vite)
+  web/e2e/                     Playwright end-to-end UI tests (TypeScript)
   knowledge/                   Markdown notes: Classic ASP / WebForms -> ASP.NET Core mappings
   samples/                     Hand-written legacy sample pages (no real employer code)
   evals/                       Eval cases: sample file + expected findings
@@ -85,6 +86,23 @@ Each rule has unit tests with positive and negative examples.
 - A test (or a small console command) runs the rule engine on all cases and prints precision/recall per rule.
 - The README shows the latest numbers.
 
+## 6a. End-to-end UI tests (Playwright)
+
+- Playwright Test (TypeScript) in `web/e2e/`, run against the real app (API + web) in **Demo mode**, so results are deterministic and free.
+- Every screen gets tests as it is built. Minimum scenarios:
+  - Home loads; code box, file upload and Analyze button are visible.
+  - Paste a sample with SQL injection → Analyze → findings table shows `SQL001` with the right line number.
+  - Upload a sample file from `samples/` → findings appear.
+  - Empty input → a clear validation message, no request sent.
+  - Summary panel shows inputs, DB access and includes (stage 3+).
+  - Migration panel shows code, sources and the "compiles" badge (stage 5+).
+  - History page lists a new analysis and opens it (stage 6+).
+  - API error (simulated with `page.route`) → friendly error message, no crash.
+- Use stable `data-testid` attributes for elements that tests target; no brittle CSS selectors.
+- Run on Chromium in CI; locally also Firefox and WebKit.
+- On failure CI uploads the Playwright HTML report, traces and screenshots as artifacts.
+- The README screenshots are produced by a Playwright script, so they stay current.
+
 ## 7. Data
 
 EF Core with SQL Server. Tables: `Analyses` (Id, FileName, Language, Code, SummaryJson, MigrationJson, CompilesOk, CreatedAt) and `Findings` (Id, AnalysisId, RuleId, Severity, Line, Title, Explanation, Fix, Source). Migrations are checked in.
@@ -93,17 +111,17 @@ EF Core with SQL Server. Tables: `Analyses` (Id, FileName, Language, Code, Summa
 
 Work one stage at a time. Each stage ends with a green build, passing tests and a commit.
 
-0. **Scaffold**: solution, projects, React app (Vite + TS), `.gitignore`, README skeleton, GitHub Actions CI (build + test). Health endpoint.
+0. **Scaffold**: solution, projects, React app (Vite + TS), Playwright set up in `web/e2e` with one smoke test (home page loads), `.gitignore`, README skeleton, GitHub Actions CI (dotnet build + test, web build + lint, Playwright). Health endpoint.
 1. **Rule engine**: `SourceFile`, `IRule`, the 7 rules, `IRuleEngine`, unit tests, and 4–6 hand-written samples in `samples/`.
-2. **API + UI for findings**: `POST /api/analyses` runs rules only. React page with code input, file upload, and a findings table with line numbers.
-3. **LLM summary**: `ILlmClient` (Ollama + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client.
+2. **API + UI for findings**: `POST /api/analyses` runs rules only. React page with code input, file upload, and a findings table with line numbers. Playwright tests for paste, upload, empty input and API error.
+3. **LLM summary**: `ILlmClient` (Ollama + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client; Playwright test for the summary panel.
 4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever + tests.
-5. **Migration proposal**: grounded prompt, sources list, Roslyn validation + one repair attempt, migration panel with a code viewer and "compiles" badge.
-6. **Persistence + history**: EF Core, migrations, History page.
+5. **Migration proposal**: grounded prompt, sources list, Roslyn validation + one repair attempt, migration panel with a code viewer and "compiles" badge. Playwright test for the migration panel.
+6. **Persistence + history**: EF Core, migrations, History page. Playwright test for history.
 7. **Evals + polish**: eval cases and metrics, Docker Compose (api, web, sqlserver), README with architecture diagram, screenshots and a short GIF.
 
 ## 9. Definition of done for the project
 
 - `docker compose up` runs everything locally in Demo mode; an optional `ollama` service/profile enables the local model.
-- CI is green on GitHub.
+- CI is green on GitHub, including the Playwright UI tests.
 - README explains the problem, the design (rules first, AI second, validation), how to run, and eval results.
