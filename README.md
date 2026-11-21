@@ -34,9 +34,22 @@ What works now:
 - Five hand-written sample pages in `samples/` (four Classic ASP, one WebForms code-behind). One of them, `safe-orders.asp`, shows the safe patterns and has only Info findings. A test checks the exact findings for each sample.
 - The rules are pattern-based heuristics, not a full VBScript/C# parser. Known limits: variables are tracked within one file only, and a value passed through a function (for example `x = Trim(name)`) is not followed.
 
+**Stage 2 – API + UI for findings** (done)
+
+- `POST /api/analyses` runs the rules (no AI and no database yet):
+
+  ```http
+  POST /api/analyses
+  { "fileName": "login.asp", "language": "classic-asp", "code": "..." }
+  ```
+
+  It returns `200 { id, fileName, language, findings: [{ ruleId, severity, line, title, explanation, fix }] }`, with `severity` as a string (`"High"`). It returns `400 { error }` when the code is empty or longer than 200,000 characters, or when `language` is not `classic-asp` or `webforms`. The `id` is not stored yet; persistence comes in Stage 6.
+- Web page: paste code or upload a `.asp`, `.inc`, `.aspx` or `.aspx.cs` file. The language is picked from the file extension and can be changed. Click **Analyze** to see a findings table with line, severity, rule, explanation and fix. The page shows clear messages for empty input, unsupported files and API errors.
+- Integration tests for the endpoint, and Playwright tests for paste, upload, empty input and API errors.
+
 No paid API or service is used. The LLM features (later stages) run on a free local model via Ollama, or in Demo mode by default.
 
-Next: Stage 2 – API + UI for findings.
+Next: Stage 3 – LLM summary.
 
 ## Repository layout
 
@@ -67,13 +80,15 @@ API (http://localhost:5080, Swagger at `/swagger`):
 dotnet run --project src/LegacyLens.Api
 ```
 
-Web app (http://localhost:5173):
+Web app (http://localhost:5173, with the API running):
 
 ```bash
 cd web
 npm install
 npm run dev
 ```
+
+Open http://localhost:5173, upload a file from `samples/` (for example `samples/login.asp`) and click **Analyze**.
 
 ## Build and test
 
