@@ -49,7 +49,30 @@ What works now:
 
 No paid API or service is used. The LLM features (later stages) run on a free local model via Ollama, or in Demo mode by default.
 
-Next: Stage 3 – LLM summary.
+**Stage 3 – LLM summary** (done)
+
+- Each analysis now includes an AI summary: what the page does, its inputs (QueryString / Form / Session), outputs, database access, includes and COM objects. The rules still run first and remain the source of truth for findings. The summary appears in a separate panel marked "AI-generated".
+- The model sits behind `ILlmClient`, which has two implementations:
+  - `DemoLlmClient` (the default) returns a fixed sample summary. It needs no model and no network, so tests and new clones work right away.
+  - `OllamaLlmClient` calls a free local model through Ollama (`POST /api/generate`). It sends a JSON schema so the reply comes back as structured JSON.
+- Reliability: the reply is parsed and validated. If it is invalid, the model gets one retry with the error in the prompt. If the retry also fails, or the model cannot be reached, the API still returns the findings, with `summary: null` and a clear `summaryError`.
+- `POST /api/analyses` now also returns `summary: { purpose, inputs, outputs, databaseAccess, includes, comObjects }` and `summaryError`.
+- Tests: unit tests with a fake `ILlmClient`, tests for the Ollama client using a fake HTTP handler (no network), and Playwright tests for the summary panel.
+
+Next: Stage 4 – Retrieval.
+
+## LLM configuration
+
+Set in `src/LegacyLens.Api/appsettings.json` or with environment variables (for example `Llm__Provider=Ollama`):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `Llm:Provider` | `Demo` | `Demo` (canned answers) or `Ollama` (local model) |
+| `Llm:Model` | `qwen2.5-coder:7b` | Ollama model name |
+| `Llm:OllamaUrl` | `http://localhost:11434` | Ollama server address |
+| `Llm:TimeoutSeconds` | `120` | Timeout for one model call |
+
+To use a real local model (free): install [Ollama](https://ollama.com), run `ollama pull qwen2.5-coder:7b`, then start the API with `Llm__Provider=Ollama`.
 
 ## Repository layout
 
@@ -64,7 +87,7 @@ tests/
 web/                         React + TypeScript (Vite)
 web/e2e/                     Playwright end-to-end UI tests
 samples/                     Hand-written legacy sample pages
-.claude/agents/              Claude Code agent roles (product manager, project manager, QA, developer)
+.claude/agents/              Claude Code agent roles (developer, QA)
 ```
 
 ## Prerequisites

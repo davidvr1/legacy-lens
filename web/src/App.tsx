@@ -1,8 +1,9 @@
 import { useState, type ChangeEvent } from 'react'
 import './App.css'
-import type { Language, Finding } from './api'
+import type { Language, AnalysisResult } from './api'
 import { analyzeCode } from './api'
 import { languageFromFileName, MAX_CODE_LENGTH } from './language'
+import SummaryPanel from './SummaryPanel'
 
 function App() {
   const [code, setCode] = useState('')
@@ -12,7 +13,7 @@ function App() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
-  const [findings, setFindings] = useState<Finding[] | null>(null)
+  const [result, setResult] = useState<AnalysisResult | null>(null)
 
   const clearMessages = () => {
     setValidationError(null)
@@ -35,7 +36,7 @@ function App() {
       setCode(await file.text())
       setFileName(file.name)
       setLanguage(detectedLanguage)
-      setFindings(null)
+      setResult(null)
     } catch {
       setUploadError('The file could not be read.')
     }
@@ -56,10 +57,9 @@ function App() {
     }
 
     setLoading(true)
-    setFindings(null)
+    setResult(null)
     try {
-      const result = await analyzeCode({ fileName, language, code })
-      setFindings(result.findings)
+      setResult(await analyzeCode({ fileName, language, code }))
     } catch {
       // Details are never shown to the user; the API error message is for developers.
       setApiError('Something went wrong while analyzing the code. Please try again.')
@@ -146,9 +146,10 @@ function App() {
 
       {loading && <div data-testid="loading">Analyzing…</div>}
 
-      {!loading && findings !== null && (
+      {!loading && result !== null && (
         <div className="results-section">
-          {findings.length === 0 ? (
+          <SummaryPanel summary={result.summary} error={result.summaryError} />
+          {result.findings.length === 0 ? (
             <div data-testid="no-findings">No findings for this file.</div>
           ) : (
             <table data-testid="findings-table" className="findings-table">
@@ -163,7 +164,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {findings.map((finding, idx) => (
+                {result.findings.map((finding, idx) => (
                   <tr key={idx} data-testid="finding-row">
                     <td data-testid="finding-line">{finding.line}</td>
                     <td>

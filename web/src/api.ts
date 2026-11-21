@@ -16,11 +16,22 @@ export interface AnalysisRequest {
   code: string
 }
 
+export interface CodeSummary {
+  purpose: string
+  inputs: string[]
+  outputs: string[]
+  databaseAccess: string[]
+  includes: string[]
+  comObjects: string[]
+}
+
 export interface AnalysisResult {
   id: string
   fileName: string
   language: Language
   findings: Finding[]
+  summary: CodeSummary | null
+  summaryError: string | null
 }
 
 export class ApiError extends Error {

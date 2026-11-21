@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using LegacyLens.Core.Rules;
+using LegacyLens.Infrastructure.Llm;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,8 @@ builder.Services.AddSingleton<IRule, OnErrorResumeNextRule>();
 builder.Services.AddSingleton<IRule, ComObjectRule>();
 builder.Services.AddSingleton<IRule, SessionUsageRule>();
 builder.Services.AddSingleton<IRule, IncludeRule>();
+
+builder.Services.AddLlm(builder.Configuration);
 
 var app = builder.Build();
 

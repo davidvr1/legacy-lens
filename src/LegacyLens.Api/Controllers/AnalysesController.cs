@@ -1,19 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
+using LegacyLens.Core.Analysis;
 using LegacyLens.Core.Model;
-using LegacyLens.Core.Rules;
+using LegacyLens.Core.Summary;
 
 namespace LegacyLens.Api.Controllers;
 
 [ApiController]
 [Route("api/analyses")]
-public sealed class AnalysesController(IRuleEngine ruleEngine) : ControllerBase
+public sealed class AnalysesController(IAnalysisService analysisService) : ControllerBase
 {
     public const int MaxCodeLength = 200_000;
 
     [HttpPost]
     [ProducesResponseType(typeof(AnalysisResponse), 200)]
     [ProducesResponseType(typeof(ErrorResponse), 400)]
-    public ActionResult<AnalysisResponse> Create(AnalyzeRequest request)
+    public async Task<ActionResult<AnalysisResponse>> Create(AnalyzeRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Code))
         {
@@ -39,15 +40,29 @@ public sealed class AnalysesController(IRuleEngine ruleEngine) : ControllerBase
         }
 
         var fileName = string.IsNullOrWhiteSpace(request.FileName) ? "pasted-code" : request.FileName.Trim();
-        var findings = ruleEngine.Run(new SourceFile(fileName, language.Value, request.Code));
+        var result = await analysisService.AnalyzeAsync(
+            new SourceFile(fileName, language.Value, request.Code),
+            cancellationToken);
 
         // Id is not stored until persistence (Stage 6).
-        return Ok(new AnalysisResponse(Guid.NewGuid(), fileName, languageName!, findings));
+        return Ok(new AnalysisResponse(
+            Guid.NewGuid(),
+            fileName,
+            languageName!,
+            result.Findings,
+            result.Summary,
+            result.SummaryError));
     }
 }
 
 public sealed record AnalyzeRequest(string? FileName, string? Language, string? Code);
 
-public sealed record AnalysisResponse(Guid Id, string FileName, string Language, IReadOnlyList<Finding> Findings);
+public sealed record AnalysisResponse(
+    Guid Id,
+    string FileName,
+    string Language,
+    IReadOnlyList<Finding> Findings,
+    CodeSummary? Summary,
+    string? SummaryError);
 
 public sealed record ErrorResponse(string Error);
