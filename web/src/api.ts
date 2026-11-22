@@ -25,6 +25,26 @@ export interface CodeSummary {
   comObjects: string[]
 }
 
+export interface MigrationSource {
+  id: string
+  title: string
+}
+
+export interface CodeDiagnostic {
+  id: string
+  message: string
+  line: number
+}
+
+export interface MigrationProposal {
+  code: string
+  notes: string[]
+  sources: MigrationSource[]
+  compilesOk: boolean
+  diagnostics: CodeDiagnostic[]
+  repaired: boolean
+}
+
 export interface AnalysisResult {
   id: string
   fileName: string
@@ -32,6 +52,8 @@ export interface AnalysisResult {
   findings: Finding[]
   summary: CodeSummary | null
   summaryError: string | null
+  migration: MigrationProposal | null
+  migrationError: string | null
 }
 
 export class ApiError extends Error {

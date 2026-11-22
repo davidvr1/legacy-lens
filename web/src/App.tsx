@@ -4,6 +4,7 @@ import type { Language, AnalysisResult } from './api'
 import { analyzeCode } from './api'
 import { languageFromFileName, MAX_CODE_LENGTH } from './language'
 import SummaryPanel from './SummaryPanel'
+import MigrationPanel from './MigrationPanel'
 
 function App() {
   const [code, setCode] = useState('')
@@ -181,6 +182,10 @@ function App() {
               </tbody>
             </table>
           )}
+          <MigrationPanel
+            migration={result.migration ?? null}
+            error={result.migrationError ?? null}
+          />
         </div>
       )}
     </main>

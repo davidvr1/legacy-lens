@@ -1,4 +1,5 @@
 using LegacyLens.Core.Analysis;
+using LegacyLens.Core.Migration;
 using LegacyLens.Core.Model;
 using LegacyLens.Core.Rules;
 using LegacyLens.Core.Summary;
@@ -11,6 +12,12 @@ public sealed class AnalysisServiceTests
     private sealed class FakeRuleEngine(IReadOnlyList<Finding> findings) : IRuleEngine
     {
         public IReadOnlyList<Finding> Run(SourceFile file) => findings;
+    }
+
+    private sealed class FakeMigrationService : IMigrationService
+    {
+        public Task<MigrationResult> ProposeAsync(SourceFile file, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
+            => Task.FromResult(new MigrationResult(null, MigrationService.UnavailableError));
     }
 
     private sealed class FakeSummaryService(SummaryResult result) : ISummaryService
@@ -31,7 +38,7 @@ public sealed class AnalysisServiceTests
     {
         var summary = SummaryTestData.Valid();
         var summaryService = new FakeSummaryService(new SummaryResult(summary, null));
-        var service = new AnalysisService(new FakeRuleEngine([F]), summaryService);
+        var service = new AnalysisService(new FakeRuleEngine([F]), summaryService, new FakeMigrationService());
 
         var result = await service.AnalyzeAsync(SummaryTestData.File(), CancellationToken.None);
 
@@ -46,7 +53,8 @@ public sealed class AnalysisServiceTests
     {
         var service = new AnalysisService(
             new FakeRuleEngine([F]),
-            new FakeSummaryService(new SummaryResult(null, SummaryService.UnavailableError)));
+            new FakeSummaryService(new SummaryResult(null, SummaryService.UnavailableError)),
+            new FakeMigrationService());
 
         var result = await service.AnalyzeAsync(SummaryTestData.File(), CancellationToken.None);
 

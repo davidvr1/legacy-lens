@@ -51,7 +51,9 @@ public sealed class AnalysesController(IAnalysisService analysisService) : Contr
             languageName!,
             result.Findings,
             result.Summary,
-            result.SummaryError));
+            result.SummaryError,
+            result.Migration,
+            result.MigrationError));
     }
 }
 
@@ -63,6 +65,8 @@ public sealed record AnalysisResponse(
     string Language,
     IReadOnlyList<Finding> Findings,
     CodeSummary? Summary,
-    string? SummaryError);
+    string? SummaryError,
+    MigrationProposal? Migration,
+    string? MigrationError);
 
 public sealed record ErrorResponse(string Error);

@@ -86,7 +86,19 @@ No paid API or service is used. The LLM features (later stages) run on a free lo
 
 - LLM sampling settings are now configurable: `Llm:Temperature`, `Llm:TopP`, `Llm:NumCtx`.
 
-Next: Stage 5 – Migration proposal.
+**Stage 5 – Migration proposal** (done)
+
+- Each analysis now also returns a proposed ASP.NET Core 8 implementation: one C# file, usually a Razor Page model, or a controller and a service for endpoint-style pages.
+- The prompt is grounded in the knowledge notes. The retriever (`Retrieval:Mode`, `Retrieval:TopK`) picks the notes most relevant to the code and the rule findings, and the prompt includes them with their ids. The model must list the ids it used. Only ids that were really in the prompt are shown as **sources**; any other id is dropped.
+- The prompt asks for parameterized queries with `System.Data.Common.DbDataSource`, async code with `CancellationToken`, secrets read from configuration, and only .NET 8 / ASP.NET Core libraries, so the code can be compile-checked without extra packages.
+- **Compile check**: the generated code is compiled in memory with Roslyn (`Microsoft.CodeAnalysis.CSharp`) against the .NET and ASP.NET Core framework assemblies. The usual Web SDK global usings are added. The code is only compiled, never run. When it fails, the model gets one repair attempt with the compiler errors. The UI shows **Compiles ✓**, or **Does not compile** with the remaining errors.
+- Reliability works the same way as for the summary: an invalid JSON reply gets one retry. If the model cannot be reached, the findings and the summary are still returned, with `migration: null` and a clear `migrationError`.
+- `POST /api/analyses` now also returns `migration: { code, notes, sources: [{ id, title }], compilesOk, diagnostics: [{ id, message, line }], repaired }` and `migrationError`.
+- Demo mode returns a canned Razor Page model that really passes the compile check, and cites the notes retrieved for your code.
+- Web: a **Migration proposal** panel with the code, a copy button, the compile badge, notes and sources.
+- Tests: unit tests for the migration service (retry, repair, source filtering), the prompt builder and the Roslyn validator, an API test in Demo mode, and Playwright tests for the migration panel.
+
+Next: Stage 5b – LLM evaluation and tuning.
 
 ## LLM configuration
 
