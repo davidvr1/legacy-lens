@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LegacyLens.Core\LegacyLens.Core.csproj" />
+    <ProjectReference Include="..\..\src\LegacyLens.Infrastructure\LegacyLens.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

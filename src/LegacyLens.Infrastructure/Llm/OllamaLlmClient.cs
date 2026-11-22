@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using LegacyLens.Core.Llm;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +19,7 @@ public sealed class OllamaLlmClient(HttpClient httpClient, IOptions<LlmOptions> 
             prompt,
             false,
             JsonNode.Parse(jsonSchema),
-            new GenerateOptions(0));
+            new GenerateOptions(options.Value.Temperature, options.Value.TopP, options.Value.NumCtx));
 
         GenerateResponse? envelope;
         try
@@ -68,7 +69,10 @@ public sealed class OllamaLlmClient(HttpClient httpClient, IOptions<LlmOptions> 
 
     private sealed record GenerateRequest(string Model, string Prompt, bool Stream, JsonNode? Format, GenerateOptions Options);
 
-    private sealed record GenerateOptions(int Temperature);
+    private sealed record GenerateOptions(
+        double Temperature,
+        [property: JsonPropertyName("top_p")] double TopP,
+        [property: JsonPropertyName("num_ctx")] int NumCtx);
 
     private sealed record GenerateResponse(string? Response);
 }

@@ -47,7 +47,7 @@ Key interfaces (in Core):
 - `IRule` – one deterministic detector. Returns `Finding[]` (Id, Severity, Line, Title, Explanation, Fix).
 - `IRuleEngine` – runs all rules on a `SourceFile`.
 - `ILlmClient` – `Task<T> CompleteJsonAsync<T>(prompt, schema, ct)`. Implementations: `OllamaLlmClient` (a free local model through Ollama's HTTP API at `http://localhost:11434`, via `IHttpClientFactory`) and `DemoLlmClient` (canned responses). No paid API is used anywhere.
-- `IRetriever` – `Task<IReadOnlyList<KnowledgeChunk>> SearchAsync(query, topK)`. First implementation: BM25 over `knowledge/*.md`. Can be swapped later for embeddings.
+- `IRetriever` – `Task<IReadOnlyList<KnowledgeChunk>> SearchAsync(query, topK)`. Implementations: `Bm25Retriever` over `knowledge/*.md` (default, deterministic), `EmbeddingRetriever` (local Ollama embedding model `nomic-embed-text`, vectors kept in memory, cosine similarity; no vector database is needed for a few dozen chunks) and `HybridRetriever` (merges both rankings with Reciprocal Rank Fusion). Chosen by `Retrieval:Mode` = `Bm25` | `Embedding` | `Hybrid`.
 - `ICodeValidator` – compiles a generated C# snippet with Roslyn and returns diagnostics.
 - `IAnalysisService` – orchestrates: rules → retrieval → LLM summary → LLM migration → validation → save.
 
@@ -86,7 +86,7 @@ Each rule has unit tests with positive and negative examples.
 Three levels, all free. Levels 1–2 are deterministic and run in CI. Level 3 needs a local model, so it runs manually and its results are committed.
 
 1. **Rules**: `evals/` holds cases: `case-name/input.asp` + `expected.json` (expected rule ids and lines). A test (or a small console command) runs the rule engine on all cases and prints precision/recall per rule.
-2. **Retrieval** (stage 4): `evals/retrieval.json` lists queries (code snippets or questions) with the expected knowledge chunk ids. A test measures recall@k and MRR. Target: recall@3 ≥ 0.9.
+2. **Retrieval** (stage 4): `evals/retrieval.json` lists queries (code snippets or questions) with the expected knowledge chunk ids. A test measures recall@k and MRR for BM25 in CI. Target: recall@3 ≥ 0.9. The eval console app (`tools/LegacyLens.Evals retrieval`) compares BM25, Embedding and Hybrid with a local Ollama (manual); the README shows the comparison and the chosen mode.
 3. **LLM** (stage 5b, manual, Ollama only): an eval console app (`tools/LegacyLens.Evals`) runs the real model on every case.
    - Summary: `expected.json` also lists expected facts (inputs, outputs, DB access, includes, COM objects). Metrics: fact recall, and hallucination rate (stated facts not in the expected list or the code).
    - Migration: compile rate on first attempt and after the repair attempt; share of answers whose cited sources are valid chunk ids that were in the prompt.
@@ -126,7 +126,7 @@ Work one stage at a time. Each stage ends with a green build, passing tests and 
 1. **Rule engine**: `SourceFile`, `IRule`, the 7 rules, `IRuleEngine`, unit tests, and 4–6 hand-written samples in `samples/`.
 2. **API + UI for findings**: `POST /api/analyses` runs rules only. React page with code input, file upload, and a findings table with line numbers. Playwright tests for paste, upload, empty input and API error.
 3. **LLM summary**: `ILlmClient` (Ollama + Demo), JSON schema, retry on invalid JSON, summary panel in the UI. Tests use a mocked client; Playwright test for the summary panel.
-4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever (configurable `k1`, `b`, `topK`) + tests + retrieval eval (section 6, level 2). Make LLM sampling parameters configurable (`Temperature`, `TopP`, `NumCtx`).
+4. **Retrieval**: write 8–12 short notes in `knowledge/` (e.g. ADO Recordset → Dapper/EF, Session → ASP.NET Core session, includes → partials/services, `Response.Write` → Razor). BM25 retriever (configurable `k1`, `b`, `topK`), embedding retriever (`nomic-embed-text` via Ollama) and hybrid retriever (RRF) + tests (embedding client mocked) + retrieval eval (section 6, level 2) and the `retrieval` command of the eval console app. Make LLM sampling parameters configurable (`Temperature`, `TopP`, `NumCtx`).
 5. **Migration proposal**: grounded prompt, sources list, Roslyn validation + one repair attempt, migration panel with a code viewer and "compiles" badge. Playwright test for the migration panel.
 5b. **LLM evaluation and tuning**: 6–8 eval cases with expected facts, the eval console app (section 6, level 3), the tuning grid, the results table, and the chosen defaults. Unit tests for the metric calculations (mocked `ILlmClient`); the real model runs only manually.
 6. **Persistence + history**: EF Core, migrations, History page. Playwright test for history.

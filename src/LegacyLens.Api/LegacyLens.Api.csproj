@@ -5,6 +5,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\knowledge\*.md" LinkBase="knowledge" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LegacyLens.Core\LegacyLens.Core.csproj" />
     <ProjectReference Include="..\LegacyLens.Infrastructure\LegacyLens.Infrastructure.csproj" />
   </ItemGroup>

@@ -13,4 +13,12 @@ public sealed class LlmOptions
     public string OllamaUrl { get; set; } = "http://localhost:11434";
 
     public int TimeoutSeconds { get; set; } = 120;
+
+    /// <summary>Sampling temperature sent to Ollama. 0 keeps the output as repeatable as possible.</summary>
+    public double Temperature { get; set; } = 0;
+
+    public double TopP { get; set; } = 1.0;
+
+    /// <summary>Context window size in tokens.</summary>
+    public int NumCtx { get; set; } = 8192;
 }

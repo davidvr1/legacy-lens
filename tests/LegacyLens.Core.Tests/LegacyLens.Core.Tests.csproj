@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <None Include="..\..\samples\**\*" LinkBase="samples" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\knowledge\*.md" LinkBase="knowledge" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\evals\retrieval.json" LinkBase="evals" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

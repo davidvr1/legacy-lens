@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using LegacyLens.Core.Rules;
 using LegacyLens.Infrastructure.Llm;
+using LegacyLens.Infrastructure.Retrieval;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddSingleton<IRule, SessionUsageRule>();
 builder.Services.AddSingleton<IRule, IncludeRule>();
 
 builder.Services.AddLlm(builder.Configuration);
+builder.Services.AddRetrieval(builder.Configuration);
 
 var app = builder.Build();
 

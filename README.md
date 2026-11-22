@@ -59,7 +59,30 @@ No paid API or service is used. The LLM features (later stages) run on a free lo
 - `POST /api/analyses` now also returns `summary: { purpose, inputs, outputs, databaseAccess, includes, comObjects }` and `summaryError`.
 - Tests: unit tests with a fake `ILlmClient`, tests for the Ollama client using a fake HTTP handler (no network), and Playwright tests for the summary panel.
 
-Next: Stage 4 – Retrieval.
+**Stage 4 – Retrieval** (done)
+
+- `knowledge/` holds 12 short hand-written notes, each mapping one legacy pattern to ASP.NET Core. Examples: ADO Recordset → Dapper / EF Core, `Session` → ASP.NET Core session, `#include` → partials and services, `Response.Write` → Razor, COM objects → .NET replacements, WebForms → Razor Pages.
+- `IRetriever` has three implementations, picked with `Retrieval:Mode`:
+  - `Bm25` (default): keyword search with a code-aware tokenizer. `Server.CreateObject` becomes `server, createobject, create, object`.
+  - `Embedding`: a local Ollama embedding model (`nomic-embed-text`) with cosine similarity. The vectors are kept in memory and computed once per process. A vector database is not needed for a few dozen chunks.
+  - `Hybrid`: merges both rankings with Reciprocal Rank Fusion.
+- The retriever is not used in the analysis yet. Stage 5 adds it to the migration prompt.
+- Retrieval eval: `evals/retrieval.json` has 22 cases (code snippets and developer questions) with the expected notes. A CI test requires BM25 recall@3 ≥ 0.9.
+
+  | Mode | Cases | Recall@3 | MRR |
+  |---|---|---|---|
+  | BM25 | 22 | 1.000 | 0.955 |
+
+  Compare all three modes with a local Ollama:
+
+  ```bash
+  ollama pull nomic-embed-text
+  dotnet run --project tools/LegacyLens.Evals -- retrieval --modes bm25,embedding,hybrid
+  ```
+
+- LLM sampling settings are now configurable: `Llm:Temperature`, `Llm:TopP`, `Llm:NumCtx`.
+
+Next: Stage 5 – Migration proposal.
 
 ## LLM configuration
 
@@ -71,6 +94,10 @@ Set in `src/LegacyLens.Api/appsettings.json` or with environment variables (for 
 | `Llm:Model` | `qwen2.5-coder:7b` | Ollama model name |
 | `Llm:OllamaUrl` | `http://localhost:11434` | Ollama server address |
 | `Llm:TimeoutSeconds` | `120` | Timeout for one model call |
+| `Llm:Temperature` / `Llm:TopP` / `Llm:NumCtx` | `0` / `1.0` / `8192` | Sampling settings sent to Ollama |
+| `Retrieval:Mode` | `Bm25` | `Bm25`, `Embedding` or `Hybrid` |
+| `Retrieval:TopK` / `K1` / `B` | `3` / `1.2` / `0.75` | Chunks per prompt and BM25 parameters |
+| `Retrieval:EmbeddingModel` | `nomic-embed-text` | Ollama embedding model |
 
 To use a real local model (free): install [Ollama](https://ollama.com), run `ollama pull qwen2.5-coder:7b`, then start the API with `Llm__Provider=Ollama`.
 
@@ -86,6 +113,9 @@ tests/
   LegacyLens.Api.Tests/      Integration tests (WebApplicationFactory)
 web/                         React + TypeScript (Vite)
 web/e2e/                     Playwright end-to-end UI tests
+knowledge/                   Migration notes used by the retriever
+evals/                       Eval data (retrieval queries)
+tools/LegacyLens.Evals/      Eval console app (manual, local Ollama)
 samples/                     Hand-written legacy sample pages
 .claude/agents/              Claude Code agent roles (developer, QA)
 ```
