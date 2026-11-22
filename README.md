@@ -72,6 +72,10 @@ No paid API or service is used. The LLM features (later stages) run on a free lo
   | Mode | Cases | Recall@3 | MRR |
   |---|---|---|---|
   | BM25 | 22 | 1.000 | 0.955 |
+  | Embedding (`nomic-embed-text`) | 22 | 1.000 | 0.970 |
+  | Hybrid (RRF) | 22 | 1.000 | 0.977 |
+
+  All three modes find every expected note in the top 3. Hybrid ranks the right note first most often. BM25 stays the default for now: it is deterministic and needs no model. The eval set will get harder, freely worded questions before the default is chosen.
 
   Compare all three modes with a local Ollama:
 
