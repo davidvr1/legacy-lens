@@ -1,3 +1,5 @@
+using LegacyLens.Core.Llm;
+
 namespace LegacyLens.Infrastructure.Llm;
 
 /// <summary>Settings for the language model, read from the "Llm" section of appsettings.json.</summary>
@@ -21,4 +23,10 @@ public sealed class LlmOptions
 
     /// <summary>Context window size in tokens.</summary>
     public int NumCtx { get; set; } = 8192;
+
+    /// <summary>Maximum tokens the model may generate per call. Stops a runaway reply; a cut-off reply is invalid JSON and gets the usual retry.</summary>
+    public int NumPredict { get; set; } = 2048;
+
+    /// <summary>Prompt style for the summary and migration prompts: "ZeroShot" (no example) or "FewShot" (one example).</summary>
+    public PromptVariant PromptVariant { get; set; } = PromptVariant.ZeroShot;
 }

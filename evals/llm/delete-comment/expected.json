@@ -1,0 +1,10 @@
+{
+  "language": "classic-asp",
+  "facts": {
+    "inputs": [["QueryString", "commentId"], ["QueryString", "postId"], ["Session", "UserId"]],
+    "outputs": [["post.asp"], ["login.asp"]],
+    "databaseAccess": [["Comments"]],
+    "includes": [["auth.inc"], ["db.inc"]],
+    "comObjects": [["ADODB.Command"]]
+  }
+}

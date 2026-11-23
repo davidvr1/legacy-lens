@@ -1,0 +1,9 @@
+{
+  "language": "classic-asp",
+  "facts": {
+    "inputs": [["QueryString", "year"], ["Session", "Role"], ["Application", "SalesDb"]],
+    "outputs": [["csv"], ["login.asp"], ["saved|confirmation|message"]],
+    "databaseAccess": [["Sales"]],
+    "comObjects": [["ADODB.Connection"], ["Scripting.FileSystemObject"]]
+  }
+}

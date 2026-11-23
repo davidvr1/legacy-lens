@@ -1,0 +1,10 @@
+{
+  "language": "classic-asp",
+  "facts": {
+    "inputs": [["Form", "email"], ["Form", "fullName"], ["Application", "NewsletterDb"]],
+    "outputs": [["mail|email"], ["thanks.asp"], ["enter an email|error|validation|message"]],
+    "databaseAccess": [["Subscribers"]],
+    "includes": [["config.inc"]],
+    "comObjects": [["ADODB.Connection"], ["CDO.Message"]]
+  }
+}

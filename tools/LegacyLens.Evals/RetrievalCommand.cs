@@ -14,7 +14,7 @@ internal static class RetrievalCommand
 
     public static async Task<int> RunAsync(EvalArguments arguments, CancellationToken cancellationToken)
     {
-        var root = FindRepoRoot(Directory.GetCurrentDirectory());
+        var root = RepoRoot.Find(Directory.GetCurrentDirectory());
         if (root is null)
         {
             Console.Error.WriteLine("LegacyLens.sln was not found in the current directory or any parent. Run the command inside the repository.");
@@ -124,17 +124,4 @@ internal static class RetrievalCommand
     }
 
     private static string Format(double value) => value.ToString("F3", CultureInfo.InvariantCulture);
-
-    private static string? FindRepoRoot(string start)
-    {
-        for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "LegacyLens.sln")))
-            {
-                return dir.FullName;
-            }
-        }
-
-        return null;
-    }
 }

@@ -1,0 +1,10 @@
+{
+  "language": "classic-asp",
+  "facts": {
+    "inputs": [["QueryString", "orderId"]],
+    "outputs": [["table|list|html"]],
+    "databaseAccess": [["OrderLines"]],
+    "includes": [["db.inc"]],
+    "comObjects": [["ADODB.Connection"], ["ADODB.Recordset"]]
+  }
+}

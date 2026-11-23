@@ -1,0 +1,8 @@
+{
+  "language": "webforms",
+  "facts": {
+    "inputs": [["QueryString", "dept"], ["HrDb"]],
+    "outputs": [["EmployeesGrid|grid"], ["CountLabel|count"], ["Session", "LastDepartment"]],
+    "databaseAccess": [["Employees"]]
+  }
+}

@@ -39,7 +39,13 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ICodeValidator, RoslynCodeValidator>();
-        services.AddSingleton(sp => new MigrationSettings(sp.GetRequiredService<IOptions<RetrievalOptions>>().Value.TopK));
+        services.AddSingleton(sp => new SummarySettings(sp.GetRequiredService<IOptions<LlmOptions>>().Value.PromptVariant));
+        services.AddSingleton(sp =>
+        {
+            var retrieval = sp.GetRequiredService<IOptions<RetrievalOptions>>().Value;
+            var llm = sp.GetRequiredService<IOptions<LlmOptions>>().Value;
+            return new MigrationSettings(retrieval.TopK, llm.PromptVariant);
+        });
 
         services.AddScoped<ISummaryService, SummaryService>();
         services.AddScoped<IMigrationService, MigrationService>();

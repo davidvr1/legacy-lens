@@ -37,6 +37,13 @@ public sealed class OllamaLlmClientOptionsTests
     }
 
     [Fact]
+    public async Task Sends_num_predict_to_cap_the_reply_length()
+    {
+        Assert.Equal(512, (await SendAsync(new LlmOptions { NumPredict = 512 })).GetProperty("num_predict").GetInt32());
+        Assert.Equal(2048, (await SendAsync(new LlmOptions())).GetProperty("num_predict").GetInt32());
+    }
+
+    [Fact]
     public async Task Sends_defaults_0_1_and_8192()
     {
         var o = await SendAsync(new LlmOptions());

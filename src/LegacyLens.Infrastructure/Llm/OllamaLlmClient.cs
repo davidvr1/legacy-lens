@@ -19,7 +19,7 @@ public sealed class OllamaLlmClient(HttpClient httpClient, IOptions<LlmOptions> 
             prompt,
             false,
             JsonNode.Parse(jsonSchema),
-            new GenerateOptions(options.Value.Temperature, options.Value.TopP, options.Value.NumCtx));
+            new GenerateOptions(options.Value.Temperature, options.Value.TopP, options.Value.NumCtx, options.Value.NumPredict));
 
         GenerateResponse? envelope;
         try
@@ -72,7 +72,8 @@ public sealed class OllamaLlmClient(HttpClient httpClient, IOptions<LlmOptions> 
     private sealed record GenerateOptions(
         double Temperature,
         [property: JsonPropertyName("top_p")] double TopP,
-        [property: JsonPropertyName("num_ctx")] int NumCtx);
+        [property: JsonPropertyName("num_ctx")] int NumCtx,
+        [property: JsonPropertyName("num_predict")] int NumPredict);
 
     private sealed record GenerateResponse(string? Response);
 }

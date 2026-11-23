@@ -26,7 +26,7 @@ public sealed class MigrationService(
         {
             var query = file.Code + "\n" + string.Join('\n', findings.Select(f => f.Title).Distinct());
             var chunks = await retriever.SearchAsync(query, settings.TopK, cancellationToken);
-            var prompt = MigrationPromptBuilder.Build(file, findings, chunks);
+            var prompt = MigrationPromptBuilder.Build(file, findings, chunks, settings.Variant);
 
             var (reply, error) = await AskAsync(prompt, cancellationToken);
             if (reply is null)

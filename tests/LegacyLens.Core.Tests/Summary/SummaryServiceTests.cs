@@ -7,7 +7,7 @@ namespace LegacyLens.Core.Tests.Summary;
 public sealed class SummaryServiceTests
 {
     private static Task<SummaryResult> Run(FakeLlmClient fake, CancellationToken ct = default)
-        => new SummaryService(fake).SummarizeAsync(SummaryTestData.File(), [], ct);
+        => new SummaryService(fake, new SummarySettings(PromptVariant.ZeroShot)).SummarizeAsync(SummaryTestData.File(), [], ct);
 
     [Fact]
     public async Task Valid_reply_first_try()

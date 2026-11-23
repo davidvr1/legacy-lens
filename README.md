@@ -98,7 +98,59 @@ No paid API or service is used. The LLM features (later stages) run on a free lo
 - Web: a **Migration proposal** panel with the code, a copy button, the compile badge, notes and sources.
 - Tests: unit tests for the migration service (retry, repair, source filtering), the prompt builder and the Roslyn validator, an API test in Demo mode, and Playwright tests for the migration panel.
 
-Next: Stage 5b – LLM evaluation and tuning.
+**Stage 5b – LLM evaluation and tuning** (done)
+
+- `evals/llm/` holds 7 hand-written eval cases: 5 Classic ASP pages and 2 WebForms code-behinds. Each case has an `input.*` file and an `expected.json` with the facts a correct summary must state: inputs, outputs, database tables, includes and COM objects. A fact is a set of keywords, and `|` separates alternatives (`["QueryString", "orderId"]`).
+- Metrics (`LegacyLens.Core.Evaluation`, unit tested with a mocked `ILlmClient`):
+  - **Fact recall**: share of expected facts that the summary states in the right field.
+  - **Hallucination rate**: share of stated items that match no expected fact *and* name nothing that appears in the code. Vague items made only of generic words, and "none" items such as `Control: None`, are not counted.
+  - **Compile 1st / after repair**: share of cases whose migration compiles on the first try, and after the one repair attempt.
+  - **Sources valid**: share of cases whose answer cites at least one note and only notes that were in the prompt.
+  - A case where the model fails (invalid JSON twice, timeout) counts as a miss on every metric.
+- The eval app runs a grid on a real local model and writes `evals/results/<time>-<label>.json` (every answer, missed fact, hallucination and compiler error) and a Markdown table:
+
+  ```bash
+  ollama pull qwen2.5-coder:3b
+  dotnet run --project tools/LegacyLens.Evals -- llm --models qwen2.5-coder:3b --variants zero-shot,few-shot \
+      --temperatures 0,0.2 --top-p 0.9,1.0 --top-k 3,5 --bm25 1.2:0.75,1.5:0.5 --runs 3
+  ```
+
+- New settings: `Llm:PromptVariant` (`ZeroShot`, or `FewShot` with one hand-written worked example) and `Llm:NumPredict` (a cap on reply tokens, so a runaway reply fails fast instead of hitting the timeout).
+
+### Tuning results
+
+Hardware: GTX 1650 (4 GB VRAM). 7 cases, 3 runs per configuration, mean ± standard deviation over the runs. The full grid (72+ configurations × 3 runs) would take days on this GPU, so the sweep went in steps: each step tunes one setting and keeps the best value of the earlier steps. The raw results are in `evals/results/`.
+
+| Step | Model | Prompt | T / top_p | TopK | Fact recall | Halluc. | Compile after repair | Sources valid | s/case |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 Model | qwen2.5-coder:1.5b | zero-shot | 0 / 1.0 | 3 | 0.76 ± 0.02 | 0.01 | 0.00 | 0.81 | 32 |
+| 1 Model | qwen2.5-coder:3b | zero-shot | 0 / 1.0 | 3 | 0.76 ± 0.00 | 0.02 | 0.00 | 0.95 | 30 |
+| 1 Model | qwen2.5-coder:7b | zero-shot | 0 / 1.0 | 3 | 0.84 ± 0.00 | 0.00 | 0.00 | 0.86 | 313 |
+| 2 Prompt | 3b | zero-shot | 0 / 1.0 | 3 | 0.76 ± 0.00 | 0.02 | 0.00 | 1.00 | 30 |
+| 2 Prompt | 3b | few-shot | 0 / 1.0 | 3 | 0.77 ± 0.01 | 0.00 | 0.29 ± 0.00 | 0.76 | 49 |
+| 3 Sampling | 3b | few-shot | **0.2 / 0.9** | 3 | 0.80 ± 0.01 | 0.00 | 0.43 ± 0.14 | 0.86 | 36 |
+| 3 Sampling | 3b | few-shot | 0.2 / 1.0 | 3 | 0.81 ± 0.02 | 0.00 | 0.29 ± 0.00 | 0.81 | 50 |
+| 3 Sampling | 3b | few-shot | 0.5 / 0.9 | 3 | 0.82 ± 0.02 | 0.00 | 0.29 ± 0.14 | 0.76 | 38 |
+| 3 Sampling | 3b | few-shot | 0.5 / 1.0 | 3 | 0.78 ± 0.06 | 0.00 | 0.33 ± 0.08 | 1.00 | 31 |
+| 4 Retrieval | 3b | few-shot | 0.2 / 0.9 | **3** (k1/b 1.2/0.75) | – | – | 0.48 ± 0.08 | 0.90 | 30 |
+| 4 Retrieval | 3b | few-shot | 0.2 / 0.9 | 3 (k1/b 1.5/0.5) | – | – | 0.43 ± 0.14 | 0.95 | 32 |
+| 4 Retrieval | 3b | few-shot | 0.2 / 0.9 | 5 (k1/b 1.2/0.75) | – | – | 0.33 ± 0.16 | 0.90 | 40 |
+| 4 Retrieval | 3b | few-shot | 0.2 / 0.9 | 5 (k1/b 1.5/0.5) | – | – | 0.24 ± 0.22 | 0.76 | 49 |
+
+Step 4 ran the migration only, because retrieval does not affect the summary. Step 1 used an earlier migration prompt, before the code rules described below were added.
+
+**Chosen defaults** (now in `appsettings.json`): `qwen2.5-coder:3b`, `FewShot`, `Temperature` 0.2, `TopP` 0.9, `TopK` 3, BM25 `K1` 1.2 / `B` 0.75. This gives fact recall ≈ 0.80, hallucination ≈ 0.00, compile after repair ≈ 0.43–0.48, and about 30–36 s per analysis.
+
+**Targets**: hallucination ≤ 0.05 is met. Fact recall ≥ 0.9 and compile after repair ≥ 0.8 are **not** met by any configuration on this hardware, so the defaults are the best configuration overall, not one that meets every target.
+
+What the eval found and fixed along the way:
+- The summary prompt listed format examples ("Form: email"), and the 1.5b model copied them into every answer. The prompt now gives only the format, `"<source>: <name>"`, and a list of sources. Hallucination dropped from 0.29 to about 0.01.
+- Migrations failed to compile because models wrapped the C# in `<%@ %>` directives, left out the Razor Pages `using`, or used legacy APIs. The migration prompt now states these rules.
+- The most common remaining compile error was an unescaped `"` that ended the JSON string in the middle of the code. The prompt now asks for escaping, and the few-shot example shows it.
+- The few-shot example cited a placeholder note id, and the model copied it. The example now cites a note from the real prompt.
+- Without a token cap, a small model could keep generating until the 300 s timeout. `NumPredict` stops this.
+- 7b gives the best fact recall but takes over 5 minutes per analysis on 4 GB VRAM. A larger GPU should rerun step 1 and likely pick 7b.
+- With temperature 0, the 3 runs give identical results (spread ± 0.00). The spread at 0.2 and the small differences between configurations (7 cases) mean the step 3 and 4 choices are indicative, not significant.
 
 ## LLM configuration
 
@@ -107,15 +159,17 @@ Set in `src/LegacyLens.Api/appsettings.json` or with environment variables (for 
 | Setting | Default | Meaning |
 |---|---|---|
 | `Llm:Provider` | `Demo` | `Demo` (canned answers) or `Ollama` (local model) |
-| `Llm:Model` | `qwen2.5-coder:7b` | Ollama model name |
+| `Llm:Model` | `qwen2.5-coder:3b` | Ollama model name (chosen in Stage 5b) |
 | `Llm:OllamaUrl` | `http://localhost:11434` | Ollama server address |
 | `Llm:TimeoutSeconds` | `120` | Timeout for one model call |
-| `Llm:Temperature` / `Llm:TopP` / `Llm:NumCtx` | `0` / `1.0` / `8192` | Sampling settings sent to Ollama |
+| `Llm:Temperature` / `Llm:TopP` / `Llm:NumCtx` | `0.2` / `0.9` / `8192` | Sampling settings sent to Ollama |
+| `Llm:NumPredict` | `2048` | Maximum reply tokens per call |
+| `Llm:PromptVariant` | `FewShot` | `ZeroShot` or `FewShot` (one worked example in the prompt) |
 | `Retrieval:Mode` | `Bm25` | `Bm25`, `Embedding` or `Hybrid` |
 | `Retrieval:TopK` / `K1` / `B` | `3` / `1.2` / `0.75` | Chunks per prompt and BM25 parameters |
 | `Retrieval:EmbeddingModel` | `nomic-embed-text` | Ollama embedding model |
 
-To use a real local model (free): install [Ollama](https://ollama.com), run `ollama pull qwen2.5-coder:7b`, then start the API with `Llm__Provider=Ollama`.
+To use a real local model (free): install [Ollama](https://ollama.com), run `ollama pull qwen2.5-coder:3b`, then start the API with `Llm__Provider=Ollama`.
 
 ## Repository layout
 
@@ -130,7 +184,7 @@ tests/
 web/                         React + TypeScript (Vite)
 web/e2e/                     Playwright end-to-end UI tests
 knowledge/                   Migration notes used by the retriever
-evals/                       Eval data (retrieval queries)
+evals/                       Eval data (retrieval queries, LLM cases in llm/, results in results/)
 tools/LegacyLens.Evals/      Eval console app (manual, local Ollama)
 samples/                     Hand-written legacy sample pages
 .claude/agents/              Claude Code agent roles (developer, QA)

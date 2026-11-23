@@ -1,0 +1,8 @@
+{
+  "language": "webforms",
+  "facts": {
+    "inputs": [["Session", "Cart"], ["Session", "CustomerId"], ["ShippingAddressBox|shipping address"], ["ShopDb"]],
+    "outputs": [["Confirmation.aspx"], ["ErrorLabel|empty"]],
+    "databaseAccess": [["Orders"], ["Inventory"]]
+  }
+}

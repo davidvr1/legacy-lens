@@ -1,0 +1,10 @@
+{
+  "language": "classic-asp",
+  "facts": {
+    "inputs": [["Form", "keyword"], ["Cookie", "lastSearch"], ["Application", "ShopDb"]],
+    "outputs": [["list|html|results"], ["cookie", "lastSearch"]],
+    "databaseAccess": [["Products"]],
+    "includes": [["header.inc"], ["footer.inc"]],
+    "comObjects": [["ADODB.Connection"], ["ADODB.Recordset"]]
+  }
+}

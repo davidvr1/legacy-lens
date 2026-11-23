@@ -7,7 +7,7 @@ namespace LegacyLens.Core.Summary;
 /// Asks the language model for a <see cref="CodeSummary"/>. An invalid reply is retried once with the error
 /// sent back to the model. Other LLM failures are not retried.
 /// </summary>
-public sealed class SummaryService(ILlmClient llmClient) : ISummaryService
+public sealed class SummaryService(ILlmClient llmClient, SummarySettings settings) : ISummaryService
 {
     public const string InvalidResponseError = "The AI summary is not available: the model returned an invalid response twice.";
 
@@ -15,7 +15,7 @@ public sealed class SummaryService(ILlmClient llmClient) : ISummaryService
 
     public async Task<SummaryResult> SummarizeAsync(SourceFile file, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
     {
-        var prompt = SummaryPromptBuilder.Build(file, findings);
+        var prompt = SummaryPromptBuilder.Build(file, findings, settings.Variant);
 
         try
         {
