@@ -1,5 +1,7 @@
 # LegacyLens
 
+[![CI](https://github.com/davidvr1/legacy-lens/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/davidvr1/legacy-lens/actions/workflows/ci.yml)
+
 AI-assisted Classic ASP / ASP.NET WebForms modernization helper. Paste a legacy page, get a summary, a list of security and quality findings, and a proposed ASP.NET Core implementation.
 
 ![LegacyLens demo: upload a page, analyze, read the summary, findings and migration, open History](docs/images/demo.gif)
@@ -97,6 +99,16 @@ dotnet run --project tools/LegacyLens.Evals -- rules
 | **All** | 30 | 0 | 1 | 1.000 | 0.968 |
 
 The one miss is on purpose: the case `known-limits` passes request data through two variables and a function (`raw = Request(...)`, `clean = Trim(raw)`, `Response.Write clean`). XSS001 follows a value through one assignment, but not through a chain of them. A CI test requires precision ≥ 0.95 and recall ≥ 0.9, and pins this known miss, so a rule change that fixes it updates the test on purpose. The cases were written by the same person who wrote the rules, so these numbers show the rules work on the patterns they target. They are not a measure on real-world code.
+
+## Lessons learned
+
+- **Small models copy whatever the prompt shows them.** The first summary prompt gave format examples ("Form: email"), and the 1.5b model put them into every answer. Hallucination was 0.29. With the examples removed, it dropped to about 0.01. The few-shot example cited a placeholder note id, and the model cited it too. Only the eval made these visible; reading a few answers by hand looked fine.
+- **A JSON schema does not make the code inside valid.** The most common compile error was an unescaped `"` that ended the JSON string in the middle of the C# code. Structured output, the compile check and one repair attempt are separate safety nets, and each one catches things the others miss. Even so, only about half of the 3b migrations compile, so the UI shows the compiler result instead of claiming success.
+- **Do not trust what the model says it used.** Models sometimes cite note ids that were not in the prompt. Those are dropped, and only the notes really retrieved are shown as sources.
+- **The hardware picks the model.** 7b had the best fact recall but took over 5 minutes per analysis on a 4 GB GPU. 3b with a few-shot prompt was the best trade-off. A token cap (`NumPredict`) stops a small model that keeps generating, so it fails fast instead of hitting the timeout.
+- **Measure spread, and be honest about sample size.** At temperature 0 the 3 runs were identical. At 0.2 they were not, and with 7 cases, most differences between configurations are within that spread. The README calls those choices indicative, not significant.
+- **A perfect score on your own test set is a warning sign.** The first rule eval scored 1.000 everywhere. Adding a case aimed at a documented weakness (data passed through a chain of variables) showed the real limit, and a test now pins it.
+- **Deterministic first keeps the AI honest.** Findings come only from rules, which are tested and measured. The model explains and drafts, but it cannot add or hide a security finding.
 
 ## Build log
 
