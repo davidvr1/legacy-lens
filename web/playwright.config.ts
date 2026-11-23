@@ -30,7 +30,13 @@ export default defineConfig({
     {
       command: 'dotnet run --project ../src/LegacyLens.Api --launch-profile http',
       url: 'http://localhost:5080/api/health',
-      env: { Llm__Provider: 'Demo' },
+      // A separate database so e2e runs do not fill the developer's History. CI sets its own.
+      env: {
+        Llm__Provider: 'Demo',
+        ConnectionStrings__LegacyLens:
+          process.env.ConnectionStrings__LegacyLens ??
+          'Server=(localdb)\\MSSQLLocalDB;Database=LegacyLens_E2E;Trusted_Connection=True;TrustServerCertificate=True',
+      },
       reuseExistingServer: !isCI,
       timeout: 180_000,
     },

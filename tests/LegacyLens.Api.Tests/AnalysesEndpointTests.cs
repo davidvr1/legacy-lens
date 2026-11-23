@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace LegacyLens.Api.Tests;
 
-public sealed class AnalysesEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AnalysesEndpointTests(ApiFactory factory)
+    : IClassFixture<ApiFactory>
 {
     // Used when a response may contain a Finding (Severity is a string like "High" thanks to
     // JsonStringEnumConverter on the server; the default client options do not know that).

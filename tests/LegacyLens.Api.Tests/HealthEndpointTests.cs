@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace LegacyLens.Api.Tests;
 
-public sealed class HealthEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class HealthEndpointTests(ApiFactory factory)
+    : IClassFixture<ApiFactory>
 {
     [Fact]
     public async Task Get_health_returns_ok_status()

@@ -11,8 +11,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LegacyLens.Api.Tests;
 
-public sealed class SummaryEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class SummaryEndpointTests(ApiFactory factory)
+    : IClassFixture<ApiFactory>
 {
     private const string Code = "<%\nDim sql, n\nn = Request.QueryString(\"name\")\nsql = \"SELECT * FROM U WHERE N = '\" & n & \"'\"\n%>\n";
 

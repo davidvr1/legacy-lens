@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Design 8.0.11 pins CodeAnalysis.CSharp.Workspaces 4.5.0, which clashes with the Roslyn 4.8.0 used by Infrastructure. Pin it to 4.8.0. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

@@ -152,6 +152,37 @@ What the eval found and fixed along the way:
 - 7b gives the best fact recall but takes over 5 minutes per analysis on 4 GB VRAM. A larger GPU should rerun step 1 and likely pick 7b.
 - With temperature 0, the 3 runs give identical results (spread ± 0.00). The spread at 0.2 and the small differences between configurations (7 cases) mean the step 3 and 4 choices are indicative, not significant.
 
+**Stage 6 – Persistence + history** (done)
+
+- Every analysis is saved in SQL Server with EF Core: the code, the rule findings (table `Findings`, `Source = "rule"`), the summary and the migration proposal as JSON (with their errors, so a failed summary still shows its message when reopened) and whether the migration compiles. The migration `InitialCreate` is checked in under `src/LegacyLens.Infrastructure/Persistence/Migrations/`. The API applies pending migrations at startup (`Database:MigrateOnStartup`, default `true`).
+- New endpoints:
+  - `GET /api/analyses` – the 100 newest analyses: `[{ id, fileName, language, createdAt, findingCounts: { high, medium, low, info } }]`.
+  - `GET /api/analyses/{id}` – the full saved result, same shape as the `POST` response, or `404 { error }`.
+  - `POST /api/analyses` now returns the stored `id` and `createdAt`, and returns `400` for a file name longer than 260 characters.
+- Web: an **Analyze / History** nav bar. History lists earlier analyses with their finding counts per severity; **Open** shows the saved summary, findings and migration. The code you typed on the Analyze page is kept when you switch views.
+- Tests: repository round-trip tests and History endpoint tests. API tests run on SQLite in memory, so `dotnet test` needs no SQL Server. Playwright tests for the History page (a real analysis that appears in History and opens, plus mocked empty, error and detail-error cases). Locally, Playwright uses a separate LocalDB database, `LegacyLens_E2E`. In CI, the Playwright job uses a throwaway SQL Server container.
+
+## Database
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `ConnectionStrings:LegacyLens` | `Server=(localdb)\MSSQLLocalDB;Database=LegacyLens;…` | SQL Server connection string. LocalDB comes with Visual Studio or SQL Server Express. |
+| `Database:MigrateOnStartup` | `true` | Apply EF Core migrations when the API starts |
+
+Any SQL Server works, for example in Docker (free Developer edition):
+
+```bash
+docker run -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD='<your password>' -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
+# then start the API with:
+ConnectionStrings__LegacyLens="Server=localhost,1433;Database=LegacyLens;User Id=sa;Password=<your password>;TrustServerCertificate=True"
+```
+
+Add a migration after a model change:
+
+```bash
+dotnet ef migrations add <Name> --project src/LegacyLens.Infrastructure --startup-project src/LegacyLens.Api --output-dir Persistence/Migrations
+```
+
 ## LLM configuration
 
 Set in `src/LegacyLens.Api/appsettings.json` or with environment variables (for example `Llm__Provider=Ollama`):
@@ -194,6 +225,7 @@ samples/                     Hand-written legacy sample pages
 
 - .NET 8 SDK (or a newer SDK with the .NET 8 runtime)
 - Node.js 20+ and npm
+- SQL Server: LocalDB (default connection string) or any SQL Server instance, see [Database](#database)
 
 ## Run locally
 

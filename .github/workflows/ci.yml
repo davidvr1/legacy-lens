@@ -38,6 +38,22 @@ jobs:
   e2e:
     name: Playwright (Chromium)
     runs-on: ubuntu-latest
+    # Throwaway SQL Server for the API; it lives only for this job. The password is not a secret.
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "LegacyLens_CI_2026!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'LegacyLens_CI_2026!' -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      ConnectionStrings__LegacyLens: "Server=localhost,1433;Database=LegacyLens;User Id=sa;Password=LegacyLens_CI_2026!;TrustServerCertificate=True"
     defaults:
       run:
         working-directory: web

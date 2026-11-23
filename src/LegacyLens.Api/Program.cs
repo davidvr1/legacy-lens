@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using LegacyLens.Core.Rules;
 using LegacyLens.Infrastructure.Llm;
+using LegacyLens.Infrastructure.Persistence;
 using LegacyLens.Infrastructure.Retrieval;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ builder.Services.AddSingleton<IRule, IncludeRule>();
 
 builder.Services.AddLlm(builder.Configuration);
 builder.Services.AddRetrieval(builder.Configuration);
+builder.Services.AddPersistence(builder.Configuration);
 
 var app = builder.Build();
 
@@ -31,6 +33,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+await app.Services.MigrateDatabaseAsync();
 
 app.Run();
 

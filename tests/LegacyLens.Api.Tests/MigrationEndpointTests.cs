@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace LegacyLens.Api.Tests;
 
-public sealed class MigrationEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class MigrationEndpointTests(ApiFactory factory)
+    : IClassFixture<ApiFactory>
 {
     private const string SqlInjectionSnippet =
         "<%\n" +
