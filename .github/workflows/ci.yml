@@ -79,3 +79,10 @@ jobs:
             web/playwright-report/
             web/test-results/
           retention-days: 7
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build

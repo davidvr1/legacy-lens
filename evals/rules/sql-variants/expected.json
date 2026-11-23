@@ -1,0 +1,10 @@
+{
+  "language": "classic-asp",
+  "findings": [
+    { "ruleId": "INC001", "line": 2 },
+    { "ruleId": "SQL001", "line": 7 },
+    { "ruleId": "SQL001", "line": 11 },
+    { "ruleId": "SQL001", "line": 16 },
+    { "ruleId": "COM001", "line": 24 }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "language": "classic-asp",
+  "findings": [
+    { "ruleId": "ERR001", "line": 4 }
+  ]
+}

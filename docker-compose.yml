@@ -1,0 +1,57 @@
+# LegacyLens: API + web + SQL Server, in Demo mode by default.
+#   docker compose up --build             -> http://localhost:8088
+#   docker compose --profile ollama up    -> also starts a local Ollama server (see README)
+#
+# The SQL Server password below is a local-only default for a throwaway container,
+# not a secret. Override it with MSSQL_SA_PASSWORD in your shell or a .env file.
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-LegacyLens_Local_2026!}
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/LegacyLens.Api/Dockerfile
+    environment:
+      ConnectionStrings__LegacyLens: "Server=sqlserver,1433;Database=LegacyLens;User Id=sa;Password=${MSSQL_SA_PASSWORD:-LegacyLens_Local_2026!};TrustServerCertificate=True"
+      Llm__Provider: ${LLM_PROVIDER:-Demo}
+      Llm__OllamaUrl: ${OLLAMA_URL:-http://ollama:11434}
+    ports:
+      - "${API_PORT:-5080}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: on-failure
+
+  web:
+    build:
+      context: web
+    ports:
+      - "${WEB_PORT:-8088}:80"
+    depends_on:
+      - api
+
+  # Optional local model: docker compose --profile ollama up
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+
+volumes:
+  sqldata:
+  ollama:

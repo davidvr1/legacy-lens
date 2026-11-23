@@ -1,0 +1,9 @@
+{
+  "language": "webforms",
+  "findings": [
+    { "ruleId": "SEC001", "line": 8 },
+    { "ruleId": "XSS001", "line": 13 },
+    { "ruleId": "SQL001", "line": 17 },
+    { "ruleId": "SQL001", "line": 26 }
+  ]
+}

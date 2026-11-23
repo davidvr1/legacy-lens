@@ -1,0 +1,6 @@
+{
+  "language": "webforms",
+  "findings": [
+    { "ruleId": "XSS001", "line": 5 }
+  ]
+}

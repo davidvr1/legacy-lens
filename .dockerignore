@@ -1,0 +1,12 @@
+**/bin
+**/obj
+**/node_modules
+web/
+tests/
+tools/
+evals/
+.git
+.github
+.claude
+.vscode
+**/*.user
