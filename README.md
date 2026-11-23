@@ -58,7 +58,7 @@ Needs only Docker. It runs the API, the web app and SQL Server, in Demo mode:
 docker compose up --build
 ```
 
-Open http://localhost:8088, upload a file from `samples/` and click **Analyze**. The API is also on http://localhost:5080. Change the ports with `WEB_PORT` and `API_PORT`. The SQL Server password is a local default for the throwaway container; set `MSSQL_SA_PASSWORD` to change it. Data is kept in the `sqldata` volume (`docker compose down -v` removes it).
+Open http://localhost:8088, upload a file from `samples/` (for example `samples/login.asp`) and click **Analyze**. The API is also reachable directly on port 5080, under `/api` only (for example http://localhost:5080/api/health); `/` returns 404. Swagger is only enabled when you run the API locally in Development (`dotnet run`), not in Docker. Change the ports with `WEB_PORT` and `API_PORT`. The SQL Server password is a local default for the throwaway container; set `MSSQL_SA_PASSWORD` to change it. Data is kept in the `sqldata` volume (`docker compose down -v` removes it).
 
 With a real local model (free; on a CPU-only machine it is slow):
 
