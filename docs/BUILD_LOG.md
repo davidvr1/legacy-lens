@@ -171,4 +171,16 @@ What the eval found and fixed along the way:
 - The API tests swap SQL Server for SQLite. EF Core 9+ also keeps the provider setup in `IDbContextOptionsConfiguration<T>`, so the test factory now removes that as well.
 - The summary and the migration run in parallel (`Task.WhenAll`). They both depend only on the rule findings, so with Ollama the slower of the two sets the time, not their sum. A unit test checks that both calls are running at the same time.
 - The optional `ollama` service in Docker Compose is pinned to `ollama/ollama:0.40.16` instead of `latest`.
-- The migration prompt and the compile check still target .NET 8 / C# 12, so the tuned LLM eval results stay valid. Moving them to .NET 10 needs a new eval run.
+
+**Maintenance – migration prompt on .NET 10** (done)
+
+- The migration prompt now asks for ASP.NET Core 10 (C# 14) and only .NET 10 base libraries. The Roslyn compile check parses C# 14 (`LanguageVersion.CSharp14`), so code that uses C# 14 features, such as the `field` keyword, is not rejected. A test covers both.
+- Re-run of the migration eval with the chosen defaults (3b, few-shot, T 0.2 / top_p 0.9, TopK 3, BM25 1.2/0.75, 3 runs). The control run uses the old .NET 8 prompt on the .NET 10 runtime, so the only difference between the last two rows is the prompt text:
+
+| Run | Compile 1st | Compile after repair | Sources valid | s/case |
+|---|---|---|---|---|
+| Step 4 (.NET 8 runtime, .NET 8 prompt) | 0.19 ± 0.08 | 0.48 ± 0.08 | 0.90 ± 0.08 | 30 |
+| Control (.NET 10 runtime, .NET 8 prompt) | 0.19 ± 0.08 | 0.38 ± 0.16 | 0.95 ± 0.08 | 33 |
+| **.NET 10 runtime, .NET 10 prompt** | 0.14 ± 0.00 | 0.43 ± 0.14 | 0.95 ± 0.08 | 40 |
+
+- Every difference is about one case-run out of 21 (≈ 0.05) and inside the spread, so the prompt change neither helps nor hurts measurably. The compiler errors have the same profile in both runs (mostly CS0246, an unknown type, then syntax errors). The higher s/case comes from a few slow cases (one took 113 s) and one invalid reply, not from a steady slowdown. The prompt now matches the runtime, so it is kept. Raw results: `evals/results/20261124-155408-net10-baseline-net8-prompt.*` and `evals/results/20261124-160559-net10-prompt.*`.

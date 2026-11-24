@@ -60,12 +60,12 @@ public static class MigrationPromptBuilder
         var example = variant == PromptVariant.FewShot ? FewShotSection(chunks) : string.Empty;
 
         return
-            "You migrate legacy source code to ASP.NET Core 8 (C# 12). " +
+            "You migrate legacy source code to ASP.NET Core 10 (C# 14). " +
             "Migrate ONLY what is in the code below. Do not invent behavior that the code does not show.\n" +
             "Requirements:\n" +
             "- Return ONE C# file: a Razor Page model (PageModel) for a Classic ASP or WebForms page, " +
             "or a controller plus a service if the page is an endpoint. Include the using directives and a file-scoped namespace.\n" +
-            "- Use only .NET 8 base libraries and ASP.NET Core. No NuGet packages (no Dapper, no EF Core, no Microsoft.Data.SqlClient). " +
+            "- Use only .NET 10 base libraries and ASP.NET Core. No NuGet packages (no Dapper, no EF Core, no Microsoft.Data.SqlClient). " +
             "For data access inject System.Data.Common.DbDataSource and use DbCommand with parameters.\n" +
             "- Never build SQL by concatenation. Read secrets from IConfiguration, never hard-code them.\n" +
             "- Use async and CancellationToken for all I/O.\n" +

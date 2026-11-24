@@ -139,6 +139,17 @@ public sealed class RoslynCodeValidatorTests
     }
 
     [Fact]
+    public async Task CSharp_14_field_keyword_compiles()
+    {
+        // The prompt asks for C# 14, so its features must pass. Under C# 12, 'field' is an undefined name (CS0103).
+        const string code = "public class X { public string Name { get; set => field = value.Trim(); } = \"\"; }";
+
+        var result = await new RoslynCodeValidator().ValidateAsync(code, CancellationToken.None);
+
+        Assert.True(result.Success, Describe(result));
+    }
+
+    [Fact]
     public async Task Cancelled_token_throws()
     {
         using var cts = new CancellationTokenSource();

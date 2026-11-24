@@ -27,6 +27,9 @@ public sealed class MigrationPromptBuilderTests
         Assert.Contains("IConfiguration", prompt);
         Assert.Contains("CancellationToken", prompt);
         Assert.Contains("No NuGet packages", prompt);
+        Assert.Contains("ASP.NET Core 10 (C# 14)", prompt);
+        Assert.Contains("Use only .NET 10 base libraries", prompt);
+        Assert.DoesNotContain(".NET 8", prompt);
     }
 
     [Fact]

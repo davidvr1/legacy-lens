@@ -75,9 +75,9 @@ The `ollama` service is pinned to `ollama/ollama:0.40.16`; change the tag in `do
 |---|---|---|---|
 | 1 Rules | 12 hand-written cases in `evals/rules/`, 31 expected findings | CI (`dotnet test`) | precision **1.000**, recall **0.968** |
 | 2 Retrieval | 22 queries in `evals/retrieval.json` | CI (BM25) + manual (embedding, hybrid) | BM25 recall@3 **1.000**, MRR 0.955 |
-| 3 LLM | 7 cases in `evals/llm/`, 3 runs per configuration | manual, local Ollama | fact recall **0.80**, hallucination **0.00**, compile after repair **0.43–0.48** |
+| 3 LLM | 7 cases in `evals/llm/`, 3 runs per configuration | manual, local Ollama | fact recall **0.80**, hallucination **0.00**, compile after repair **0.43** (latest run, .NET 10) |
 
-Details for levels 2 and 3 are in the Stage 4 and Stage 5b sections of the [build log](docs/BUILD_LOG.md), including the [tuning results](docs/BUILD_LOG.md#tuning-results).
+Details for levels 2 and 3 are in the Stage 4 and Stage 5b sections of the [build log](docs/BUILD_LOG.md), including the [tuning results](docs/BUILD_LOG.md#tuning-results). The latest re-run, after the move to .NET 10, is at the end of the build log.
 
 ### Rule eval (level 1)
 
@@ -158,7 +158,7 @@ To use a real local model (free): install [Ollama](https://ollama.com), run `oll
 
 ```
 src/
-  LegacyLens.Api/            ASP.NET Core 8 Web API
+  LegacyLens.Api/            ASP.NET Core 10 Web API
   LegacyLens.Core/           Domain models, interfaces, rule engine, orchestration
   LegacyLens.Infrastructure/ EF Core, LLM client, retriever, Roslyn compile check
 tests/

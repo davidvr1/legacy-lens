@@ -49,7 +49,7 @@ public sealed class RoslynCodeValidator : ICodeValidator
 
     private static CodeValidationResult Validate(string code, CancellationToken cancellationToken)
     {
-        var parseOptions = new CSharpParseOptions(LanguageVersion.CSharp12);
+        var parseOptions = new CSharpParseOptions(LanguageVersion.CSharp14);
         var snippetTree = CSharpSyntaxTree.ParseText(code, parseOptions, path: "Migrated.cs", cancellationToken: cancellationToken);
         var usingsTree = CSharpSyntaxTree.ParseText(GlobalUsings, parseOptions, path: "GlobalUsings.cs", cancellationToken: cancellationToken);
 
