@@ -46,5 +46,6 @@ public sealed class RecordingLlmClientTests
         var call = Assert.Single(recorder.Calls);
         Assert.Equal("p", call.Prompt);
         Assert.Null(call.Reply);
+        Assert.Equal("bad", call.Error);
     }
 }

@@ -12,6 +12,9 @@ public static class MigrationPromptBuilder
     /// <summary>Starts the line that introduces each knowledge note in the prompt. The id follows it.</summary>
     public const string SourceHeaderPrefix = "### Source id: ";
 
+    /// <summary>Starts the repair part of a repair prompt. The eval uses it to find the repair call.</summary>
+    public const string RepairMarker = "Your previous code did not compile.";
+
     /// <summary>Introduces the worked example in the few-shot prompt. The example is not the real file.</summary>
     public const string FewShotExampleHeader = "Example (a different file, only to show the expected style; do not copy it):";
 
@@ -108,11 +111,31 @@ public static class MigrationPromptBuilder
 
         return
             originalPrompt + "\n" +
-            "Your previous code did not compile. The code was:\n" +
+            RepairMarker + " The code was:\n" +
             previousCode + "\n\n" +
             "The compiler errors were:\n" +
             errors + "\n\n" +
+            TruncationHint(previousCode) +
             "Fix the errors and reply again with the full corrected JSON.";
+    }
+
+    /// <summary>
+    /// For code that stops in the middle: says where, why, and how to avoid the quote. Empty for complete code.
+    /// The compiler errors alone (CS1513 "} expected") do not tell a small model that its code was cut off.
+    /// </summary>
+    private static string TruncationHint(string previousCode)
+    {
+        if (!TruncatedCode.IsTruncated(previousCode))
+        {
+            return string.Empty;
+        }
+
+        var lastLine = previousCode.TrimEnd().Split('\n').Length;
+        return
+            $"Your code stops in the middle of line {lastLine}. A double quote inside the code was probably not escaped, " +
+            "so it ended the JSON string and the rest of the code was lost. Write every double quote inside the code as \\\". " +
+            "Where the code reads a request value such as Request.Form[\"email\"], bind it as a handler parameter instead " +
+            "(OnPostAsync(string email, CancellationToken cancellationToken)), which needs no quotes.\n\n";
     }
 
     /// <summary>Returns the note ids from the prompt, in order. Used by the Demo client to cite the notes it was given.</summary>

@@ -19,7 +19,8 @@ internal sealed record LlmCaseReport(
     string? MigrationError,
     double MigrationSeconds,
     CodeSummary? StatedSummary,
-    MigrationProposal? Proposal)
+    MigrationProposal? Proposal,
+    MigrationTrace? MigrationTrace)
 {
     public static LlmCaseReport From(LlmCaseResult result)
     {
@@ -32,7 +33,8 @@ internal sealed record LlmCaseReport(
             result.MigrationError,
             result.MigrationDuration.TotalSeconds,
             result.StatedSummary,
-            result.Proposal);
+            result.Proposal,
+            result.MigrationTrace);
     }
 }
 

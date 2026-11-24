@@ -101,5 +101,22 @@ public sealed class MigrationPromptBuilderTests
         Assert.Contains("did not compile", repair);
         Assert.Contains("- line 4: CS0103 name missing", repair);
         Assert.Contains("- line 7: CS1002 ; expected", repair);
+        Assert.Contains(MigrationPromptBuilder.RepairMarker, repair);
+        Assert.DoesNotContain("stops in the middle", repair);
+    }
+
+    [Fact]
+    public void BuildRepair_for_truncated_code_names_the_line_the_cause_and_model_binding()
+    {
+        var repair = MigrationPromptBuilder.BuildRepair(
+            "ORIGINAL",
+            "class M\n{\n    void OnPost()\n    {\n        Email = Request.Form[",
+            [new CodeDiagnostic("CS1513", "} expected", 5)]);
+
+        Assert.Contains("Your code stops in the middle of line 5.", repair);
+        Assert.Contains("not escaped", repair);
+        Assert.Contains("\\\"", repair);
+        Assert.Contains("OnPostAsync(string email, CancellationToken cancellationToken)", repair);
+        Assert.EndsWith("Fix the errors and reply again with the full corrected JSON.", repair);
     }
 }

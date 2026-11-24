@@ -255,4 +255,78 @@ public sealed class LlmEvaluatorTests
         Assert.Equal(1, result.Summary!.HallucinatedItems);
         Assert.Equal(0.5, result.Summary.HallucinationRate);
     }
+
+    [Fact]
+    public async Task Trace_of_a_first_try_compile_has_no_repair()
+    {
+        var llm = new FakeLlmClient().Enqueue(MigrationTestData.Reply("class Good {}", "sql-injection"));
+
+        var result = await Evaluator().RunCaseAsync(llm, Case, Options(summary: false), CancellationToken.None);
+
+        var trace = result.MigrationTrace!;
+        Assert.Equal("class Good {}", trace.FirstCode);
+        Assert.Empty(trace.FirstDiagnostics);
+        Assert.False(trace.FirstTruncated);
+        Assert.False(trace.RepairAttempted);
+        Assert.Null(trace.RepairError);
+    }
+
+    [Fact]
+    public async Task Trace_keeps_the_first_attempt_when_the_repair_is_used()
+    {
+        var llm = new FakeLlmClient()
+            .Enqueue(MigrationTestData.Reply("class Bad { void M() { x = Request.Form[", "sql-injection"))
+            .Enqueue(MigrationTestData.Reply("class Good {}", "sql-injection"));
+        var validator = new FakeCodeValidator(MigrationTestData.Fail(id: "CS1513", message: "} expected"), MigrationTestData.Ok());
+
+        var result = await Evaluator(validator: validator).RunCaseAsync(llm, Case, Options(summary: false), CancellationToken.None);
+
+        var trace = result.MigrationTrace!;
+        Assert.Equal("class Bad { void M() { x = Request.Form[", trace.FirstCode);
+        Assert.Equal("CS1513", Assert.Single(trace.FirstDiagnostics).Id);
+        Assert.True(trace.FirstTruncated);
+        Assert.True(trace.RepairAttempted);
+        Assert.Null(trace.RepairError);
+        Assert.Equal("class Good {}", result.Proposal!.Code);
+    }
+
+    [Fact]
+    public async Task Trace_gives_the_validation_error_of_an_invalid_repair_reply()
+    {
+        var llm = new FakeLlmClient()
+            .Enqueue(MigrationTestData.Reply("bad code", "sql-injection"))
+            .Enqueue(new MigrationReply("", ["n"], ["sql-injection"]));
+        var validator = new FakeCodeValidator(MigrationTestData.Fail());
+
+        var result = await Evaluator(validator: validator).RunCaseAsync(llm, Case, Options(summary: false), CancellationToken.None);
+
+        var trace = result.MigrationTrace!;
+        Assert.True(trace.RepairAttempted);
+        Assert.Equal(MigrationReplyValidator.Validate(new MigrationReply("", ["n"], ["sql-injection"])), trace.RepairError);
+        Assert.NotNull(trace.RepairError);
+    }
+
+    [Fact]
+    public async Task Trace_gives_the_message_of_a_repair_call_that_threw()
+    {
+        var llm = new FakeLlmClient()
+            .Enqueue(MigrationTestData.Reply("bad code", "sql-injection"))
+            .Enqueue(new LlmInvalidResponseException("not JSON"));
+        var validator = new FakeCodeValidator(MigrationTestData.Fail());
+
+        var result = await Evaluator(validator: validator).RunCaseAsync(llm, Case, Options(summary: false), CancellationToken.None);
+
+        Assert.Equal("not JSON", result.MigrationTrace!.RepairError);
+        Assert.False(result.Proposal!.Repaired);
+    }
+
+    [Fact]
+    public async Task No_trace_when_no_reply_was_compiled_or_migration_not_run()
+    {
+        var down = await Evaluator().RunCaseAsync(new FakeLlmClient().Enqueue(new LlmException("down")), Case, Options(summary: false), CancellationToken.None);
+        var skipped = await Evaluator().RunCaseAsync(new FakeLlmClient().Enqueue(GoodSummary()), Case, Options(migration: false), CancellationToken.None);
+
+        Assert.Null(down.MigrationTrace);
+        Assert.Null(skipped.MigrationTrace);
+    }
 }

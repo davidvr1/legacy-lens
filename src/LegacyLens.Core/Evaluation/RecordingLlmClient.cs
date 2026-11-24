@@ -17,9 +17,9 @@ public sealed class RecordingLlmClient(ILlmClient inner) : ILlmClient
         {
             reply = await inner.CompleteJsonAsync<T>(prompt, jsonSchema, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
-            calls.Add(new LlmCall(prompt, null));
+            calls.Add(new LlmCall(prompt, null, ex.Message));
             throw;
         }
 

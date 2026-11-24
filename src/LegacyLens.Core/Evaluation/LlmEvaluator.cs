@@ -28,7 +28,8 @@ public sealed class LlmEvaluator(IRuleEngine ruleEngine, IRetriever retriever, I
             migration.Error,
             migration.Duration,
             summary.Raw,
-            migration.Raw);
+            migration.Raw,
+            migration.Trace);
     }
 
     private static async Task<(SummaryScore? Score, string? Error, TimeSpan Duration, CodeSummary? Raw)> RunSummaryAsync(
@@ -56,7 +57,7 @@ public sealed class LlmEvaluator(IRuleEngine ruleEngine, IRetriever retriever, I
         return (SummaryScorer.Score(result.Summary, evalCase.Facts, evalCase.File.Code), null, stopwatch.Elapsed, result.Summary);
     }
 
-    private async Task<(MigrationScore? Score, string? Error, TimeSpan Duration, MigrationProposal? Raw)> RunMigrationAsync(
+    private async Task<(MigrationScore? Score, string? Error, TimeSpan Duration, MigrationProposal? Raw, MigrationTrace? Trace)> RunMigrationAsync(
         ILlmClient llmClient,
         LlmEvalCase evalCase,
         IReadOnlyList<Finding> findings,
@@ -65,22 +66,49 @@ public sealed class LlmEvaluator(IRuleEngine ruleEngine, IRetriever retriever, I
     {
         if (!options.RunMigration)
         {
-            return (null, null, TimeSpan.Zero, null);
+            return (null, null, TimeSpan.Zero, null, null);
         }
 
         var recorder = new RecordingLlmClient(llmClient);
-        var service = new MigrationService(recorder, retriever, codeValidator, new MigrationSettings(options.TopK, options.Variant));
+        var validator = new RecordingCodeValidator(codeValidator);
+        var service = new MigrationService(recorder, retriever, validator, new MigrationSettings(options.TopK, options.Variant));
         var stopwatch = Stopwatch.StartNew();
         var result = await service.ProposeAsync(evalCase.File, findings, cancellationToken);
         stopwatch.Stop();
 
+        var trace = Trace(validator.Checks, recorder.Calls);
         if (result.Proposal is null)
         {
-            return (null, result.Error, stopwatch.Elapsed, null);
+            return (null, result.Error, stopwatch.Elapsed, null, trace);
         }
 
         var score = MigrationScorer.Score(result.Proposal, CitedIds(recorder.Calls), PromptIds(recorder.Calls));
-        return (score, null, stopwatch.Elapsed, result.Proposal);
+        return (score, null, stopwatch.Elapsed, result.Proposal, trace);
+    }
+
+    /// <summary>The first compiled reply and what the repair call did. Null when no reply was compiled.</summary>
+    private static MigrationTrace? Trace(IReadOnlyList<CodeCheck> checks, IReadOnlyList<LlmCall> calls)
+    {
+        if (checks.Count == 0)
+        {
+            return null;
+        }
+
+        var first = checks[0];
+        var repairCall = calls.FirstOrDefault(call => call.Prompt.Contains(MigrationPromptBuilder.RepairMarker, StringComparison.Ordinal));
+        var repairError = repairCall switch
+        {
+            null => null,
+            { Reply: MigrationReply reply } => MigrationReplyValidator.Validate(reply),
+            _ => repairCall.Error ?? "The repair call failed.",
+        };
+
+        return new MigrationTrace(
+            first.Code,
+            first.Result.Diagnostics,
+            TruncatedCode.IsTruncated(first.Code),
+            repairCall is not null,
+            repairError);
     }
 
     /// <summary>The note ids that the first prompt offered. Empty when there were no calls.</summary>
