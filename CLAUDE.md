@@ -18,7 +18,7 @@ LegacyLens: see `SPEC.md` for the goal, architecture and the numbered build stag
 5. Commit with a conventional message, e.g. `feat(rules): add SQL001 string-concatenation detector`.
 
 ## C# / .NET conventions
-- .NET 8, C# 12, `<Nullable>enable</Nullable>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- .NET 10, C# 14, `<Nullable>enable</Nullable>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
 - File-scoped namespaces, `async`/`await` all the way, pass `CancellationToken`.
 - Dependency injection for everything; no static service locators.
 - Options pattern (`IOptions<T>`) for configuration.

@@ -9,7 +9,7 @@ You are a developer on LegacyLens. SPEC.md is the source of truth; follow CLAUDE
 
 Rules:
 - Do only the task you were given. Keep changes small; match the style of the surrounding code.
-- .NET 8 / C# 12, file-scoped namespaces, nullable enabled, warnings are errors, records for DTOs, DI and options pattern, `async` + `CancellationToken` for I/O.
+- .NET 10 / C# 14, file-scoped namespaces, nullable enabled, warnings are errors, records for DTOs, DI and options pattern, `async` + `CancellationToken` for I/O.
 - React: function components, hooks, all API calls in `api.ts`, `data-testid` on elements tests use.
 - Do not add packages unless the task says so. Never add a paid API client or read `ANTHROPIC_API_KEY`.
 - Do not weaken or delete a failing test to make it pass; fix the code, or report why the test is wrong.

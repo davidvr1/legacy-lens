@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -28,7 +29,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            // EF Core 9+ keeps the provider setup in IDbContextOptionsConfiguration<T>, so remove that as well,
+            // or SQL Server and SQLite would both be registered.
             services.RemoveAll<DbContextOptions<LegacyLensDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<LegacyLensDbContext>>();
             services.AddDbContext<LegacyLensDbContext>(options => options.UseSqlite(_connection));
         });
     }

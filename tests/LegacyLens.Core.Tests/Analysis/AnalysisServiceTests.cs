@@ -51,7 +51,63 @@ public sealed class AnalysisServiceTests
             => Task.FromResult(Saved.FirstOrDefault(s => s.Id == id));
     }
 
+    /// <summary>Signals when a call has started, then waits until the test releases it.</summary>
+    private sealed class Gate<T>(T result)
+    {
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Started => _started.Task;
+
+        public void Release() => _release.SetResult();
+
+        public async Task<T> RunAsync(CancellationToken cancellationToken)
+        {
+            _started.SetResult();
+            await _release.Task.WaitAsync(cancellationToken);
+            return result;
+        }
+    }
+
+    private sealed class GatedSummaryService(Gate<SummaryResult> gate) : ISummaryService
+    {
+        public Task<SummaryResult> SummarizeAsync(SourceFile file, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
+            => gate.RunAsync(cancellationToken);
+    }
+
+    private sealed class GatedMigrationService(Gate<MigrationResult> gate) : IMigrationService
+    {
+        public Task<MigrationResult> ProposeAsync(SourceFile file, IReadOnlyList<Finding> findings, CancellationToken cancellationToken)
+            => gate.RunAsync(cancellationToken);
+    }
+
     private static readonly Finding F = new("SQL001", Severity.High, 3, "t", "e", "f");
+
+    [Fact]
+    public async Task Summary_and_migration_run_in_parallel()
+    {
+        var summary = SummaryTestData.Valid();
+        var summaryGate = new Gate<SummaryResult>(new SummaryResult(summary, null));
+        var migrationGate = new Gate<MigrationResult>(new MigrationResult(null, MigrationService.UnavailableError));
+        var repository = new FakeAnalysisRepository();
+        var service = new AnalysisService(
+            new FakeRuleEngine([F]), new GatedSummaryService(summaryGate), new GatedMigrationService(migrationGate), repository);
+
+        var analysis = service.AnalyzeAsync(SummaryTestData.File(), CancellationToken.None);
+
+        // Neither call is released yet, so both can only have started if they run at the same time.
+        await Task.WhenAll(summaryGate.Started, migrationGate.Started).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(analysis.IsCompleted);
+        Assert.Empty(repository.Saved);
+
+        migrationGate.Release();
+        summaryGate.Release();
+        var stored = await analysis.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Same(summary, stored.Result.Summary);
+        Assert.Equal(MigrationService.UnavailableError, stored.Result.MigrationError);
+        Assert.Single(repository.Saved);
+    }
 
     [Fact]
     public async Task Combines_findings_and_summary_and_passes_findings_to_summary()

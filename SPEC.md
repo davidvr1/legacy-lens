@@ -5,7 +5,7 @@
 LegacyLens takes a legacy web page (Classic ASP or ASP.NET WebForms), explains what it does, flags security and quality risks, and proposes an equivalent modern ASP.NET Core implementation.
 
 It is a portfolio project. It should show:
-- Solid .NET 8 backend engineering (Web API, EF Core, SQL Server, clean layering, tests).
+- Solid .NET 10 backend engineering (Web API, EF Core, SQL Server, clean layering, tests).
 - A React + TypeScript front end.
 - Practical, *reliable* AI use: deterministic checks first, LLM second, structured output, grounding, validation of generated code, and an evaluation harness. The LLM runs locally (Ollama) behind a swappable interface: zero cost, no code leaves the machine.
 - DevOps basics: Docker Compose and GitHub Actions CI.
@@ -49,7 +49,7 @@ Key interfaces (in Core):
 - `ILlmClient` – `Task<T> CompleteJsonAsync<T>(prompt, schema, ct)`. Implementations: `OllamaLlmClient` (a free local model through Ollama's HTTP API at `http://localhost:11434`, via `IHttpClientFactory`) and `DemoLlmClient` (canned responses). No paid API is used anywhere.
 - `IRetriever` – `Task<IReadOnlyList<KnowledgeChunk>> SearchAsync(query, topK)`. Implementations: `Bm25Retriever` over `knowledge/*.md` (default, deterministic), `EmbeddingRetriever` (local Ollama embedding model `nomic-embed-text`, vectors kept in memory, cosine similarity; no vector database is needed for a few dozen chunks) and `HybridRetriever` (merges both rankings with Reciprocal Rank Fusion). Chosen by `Retrieval:Mode` = `Bm25` | `Embedding` | `Hybrid`.
 - `ICodeValidator` – compiles a generated C# snippet with Roslyn and returns diagnostics.
-- `IAnalysisService` – orchestrates: rules → retrieval → LLM summary → LLM migration → validation → save.
+- `IAnalysisService` – orchestrates: rules → (LLM summary in parallel with retrieval → LLM migration → validation) → save.
 
 API endpoints:
 - `POST /api/analyses` – body: `{ fileName, language: "classic-asp" | "webforms", code }` → full analysis result.

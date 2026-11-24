@@ -45,7 +45,7 @@ services:
 
   # Optional local model: docker compose --profile ollama up
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.16
     profiles: ["ollama"]
     volumes:
       - ollama:/root/.ollama
