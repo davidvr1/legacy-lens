@@ -184,3 +184,18 @@ What the eval found and fixed along the way:
 | **.NET 10 runtime, .NET 10 prompt** | 0.14 ± 0.00 | 0.43 ± 0.14 | 0.95 ± 0.08 | 40 |
 
 - Every difference is about one case-run out of 21 (≈ 0.05) and inside the spread, so the prompt change neither helps nor hurts measurably. The compiler errors have the same profile in both runs (mostly CS0246, an unknown type, then syntax errors). The higher s/case comes from a few slow cases (one took 113 s) and one invalid reply, not from a steady slowdown. The prompt now matches the runtime, so it is kept. Raw results: `evals/results/20261124-155408-net10-baseline-net8-prompt.*` and `evals/results/20261124-160559-net10-prompt.*`.
+
+**Maintenance – SQL notes without Dapper** (done)
+
+- What CS0246 (unknown type) showed: in 11 of the 24 failed migrations of the two runs above, the model used `SqlConnection`/`SqlCommand`, Dapper's `CommandDefinition`, or a row record it never declared (`ProductRow`). The cause was the knowledge notes, not the model alone. The two SQL notes, which are in almost every prompt (the ADO note in 41 of 41), showed Dapper with `new SqlConnection(...)` and used an undeclared `ProductRow`. That is exactly what the prompt forbids, and a 3b model copies the example in front of it.
+- The C# examples in `ado-recordset-to-dapper` and `sql-injection-parameterized-queries` now use an injected `DbDataSource`, parameters and `ExecuteReaderAsync`, and declare their row record. The ids stay the same, so the retrieval eval is unchanged (BM25 recall@3 1.000, MRR 0.955). The first note's title is now "ADO Recordset to Typed Rows". A test compiles both examples with the same Roslyn check as the model's code, and fails if they mention Dapper or `SqlConnection` again.
+- The prompt adds one requirement: declare every record and class you use in the same file.
+- Eval, same settings as above:
+
+| Run | Compile 1st | Compile after repair | Sources valid | s/case |
+|---|---|---|---|---|
+| .NET 10 prompt, old notes | 0.14 ± 0.00 | 0.43 ± 0.14 | 0.95 ± 0.08 | 40 |
+| **.NET 10 prompt, DbDataSource notes** | **0.38 ± 0.08** | 0.43 ± 0.14 | **1.00 ± 0.00** | 35 |
+
+- Compile on the first try went from 3 to 8 of 21 runs, outside the spread, the clearest gain so far. Compile after repair did not move: the repair step now saves 1 proposal instead of 6, so the gain is in first-try quality, not in the final share. Failed migrations with CS0246 dropped from about 5.5 to 4 per run.
+- What remains: `checkout` and `employee-list` still use `SqlConnection` (their WebForms input does, and the model keeps it), and `delete-comment` does too. The most common error is now CS0103 (an undefined name), not CS0246. Raw results: `evals/results/20261124-170606-net10-dbdatasource-notes.*`.

@@ -1,6 +1,6 @@
-# ADO Recordset to Dapper
+# ADO Recordset to Typed Rows
 
-Tags: ADODB.Connection, ADODB.Recordset, Recordset, rs.Open, rs.EOF, rs.MoveNext, rs.Close, Server.CreateObject, Connection.Execute, Dapper, QueryAsync, SqlConnection
+Tags: ADODB.Connection, ADODB.Recordset, Recordset, rs.Open, rs.EOF, rs.MoveNext, rs.Close, Server.CreateObject, Connection.Execute, SqlConnection, DbDataSource, ExecuteReaderAsync
 
 ## Legacy pattern
 
@@ -23,29 +23,38 @@ conn.Close
 
 ## ASP.NET Core equivalent
 
-Dapper maps each row to a record, so there is no cursor to move. Open the connection with `await using`, pass parameters as an anonymous object, and return a typed list.
+Read the rows into a list of records, so no cursor leaves the data code. Create the command from an injected `DbDataSource`, pass values as parameters, and return a typed list. Declare the row record in the same file.
 
 ```csharp
+using System.Data.Common;
+
 public sealed record UserRow(int Id, string Name);
 
-public sealed class UserQueries(string connectionString)
+public sealed class UserQueries(DbDataSource dataSource)
 {
     public async Task<IReadOnlyList<UserRow>> GetActiveUsersAsync(CancellationToken cancellationToken)
     {
-        await using var connection = new SqlConnection(connectionString);
-        var rows = await connection.QueryAsync<UserRow>(
-            new CommandDefinition(
-                "SELECT Id, Name FROM Users WHERE Active = @Active",
-                new { Active = true },
-                cancellationToken: cancellationToken));
-        return rows.ToList();
+        await using var command = dataSource.CreateCommand("SELECT Id, Name FROM Users WHERE Active = @Active");
+        var active = command.CreateParameter();
+        active.ParameterName = "@Active";
+        active.Value = true;
+        command.Parameters.Add(active);
+
+        var rows = new List<UserRow>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add(new UserRow(reader.GetInt32(0), reader.GetString(1)));
+        }
+
+        return rows;
     }
 }
 ```
 
 ## Notes
 
-- Use `SqlConnection` from Microsoft.Data.SqlClient and let ADO.NET pooling reuse physical connections. Do not keep a connection open in a singleton.
-- Dapper maps columns to record constructor parameters by name, so alias columns in SQL when the names differ.
+- Inject `System.Data.Common.DbDataSource`, registered once at startup for the database provider. It pools connections; do not keep a connection open in a singleton.
+- Read columns by position in the order of the `SELECT` list, and alias columns in SQL when the names differ from the record.
 - Always pass values as parameters (`@Active`). String concatenation reopens SQL injection; see the SQL injection note.
 - Test the query class behind an interface in unit tests. Run SQL checks against a disposable test database, never production.

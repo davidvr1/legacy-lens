@@ -65,6 +65,7 @@ public static class MigrationPromptBuilder
             "Requirements:\n" +
             "- Return ONE C# file: a Razor Page model (PageModel) for a Classic ASP or WebForms page, " +
             "or a controller plus a service if the page is an endpoint. Include the using directives and a file-scoped namespace.\n" +
+            "- Declare every record and class you use in the same file, for example a row record for query results.\n" +
             "- Use only .NET 10 base libraries and ASP.NET Core. No NuGet packages (no Dapper, no EF Core, no Microsoft.Data.SqlClient). " +
             "For data access inject System.Data.Common.DbDataSource and use DbCommand with parameters.\n" +
             "- Never build SQL by concatenation. Read secrets from IConfiguration, never hard-code them.\n" +

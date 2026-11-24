@@ -17,6 +17,27 @@ public sealed class RoslynCodeValidatorTests
         Assert.Empty(result.Diagnostics);
     }
 
+    /// <summary>
+    /// The SQL notes are shown to the model as examples, and a small model copies them. Their C# must follow the
+    /// prompt (DbDataSource, no Dapper or SqlClient) and pass the same compile check as the model's own code.
+    /// </summary>
+    [Theory]
+    [InlineData("ado-recordset-to-dapper.md")]
+    [InlineData("sql-injection-parameterized-queries.md")]
+    public async Task Csharp_example_in_sql_knowledge_note_compiles(string note)
+    {
+        var text = (await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "knowledge", note))).ReplaceLineEndings("\n");
+        var start = text.IndexOf("```csharp\n", StringComparison.Ordinal) + "```csharp\n".Length;
+        var code = text[start..text.IndexOf("```", start, StringComparison.Ordinal)];
+
+        var result = await new RoslynCodeValidator().ValidateAsync(code, CancellationToken.None);
+
+        Assert.True(result.Success, Describe(result));
+        Assert.Contains("DbDataSource", code);
+        Assert.DoesNotContain("SqlConnection", code);
+        Assert.DoesNotContain("Dapper", text);
+    }
+
     private static string Describe(LegacyLens.Core.Validation.CodeValidationResult r)
         => string.Join("; ", r.Diagnostics.Select(d => $"{d.Line} {d.Id} {d.Message}"));
 
